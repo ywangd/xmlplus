@@ -39,15 +39,15 @@
 
 (defmacro x->
   [loc & args]
-  `(loop [res# ~loc preds# ~args]
-     (let [pred# ~(first '~preds#)]
-       (print 'pred#)
-     ;(if (= nil 'pred#) res#)
-     ;(if (= (type pred#) ~java.lang.Long)
-      ;(recur (first res#) (rest preds#))
-      ;(recur (apply #(zfx/xml-> % pred#) res#) (rest preds#))
-      ;res#
-      ;)
+  `(loop [res# ~loc preds# '~args] 
+     (let [pred# (first preds#)]
+       (println pred# (rest preds#))
+       (if (= nil pred#) res#)
+       (cond
+         (= nil pred#) res#
+         (= (type pred#) 'java.lang.Long) (recur (first res#) (rest preds#))
+         :else (recur (mapcat #(zfx/xml-> % pred#) res#) (rest preds#))
+         )       
      )
    )
 )
