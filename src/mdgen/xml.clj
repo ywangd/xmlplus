@@ -37,17 +37,20 @@
   (zip/root (zip/edit (apply query1 root args) #(assoc % :content ["Changed"])))
 )
 
-(defmacro x->
+(defn x->
+  "Similar to clojure.data.zip/xml-> with the ability to take integer index as index filter"
   [loc & args]
-  `(loop [res# ~loc preds# '~args] 
-     (let [pred# (first preds#)]
-       (println pred# (rest preds#))
-       (if (= nil pred#) res#)
-       (cond
-         (= nil pred#) res#
-         (= (type pred#) 'java.lang.Long) (recur (first res#) (rest preds#))
-         :else (recur (mapcat #(zfx/xml-> % pred#) res#) (rest preds#))
-         )       
+  (loop [res loc preds args]
+    (let [pred (first preds)]
+      (if (= nil pred) res)
+      (cond
+        (= nil pred) res
+        (= (type pred) java.lang.Long) (recur (nth res pred nil) (rest preds))
+        (= (type res) clojure.lang.PersistentVector)
+          (recur (zfx/xml-> res pred) (rest preds))
+        :else (recur (mapcat #(zfx/xml-> % pred) res) (rest preds))
+        )
      )
    )
-)
+ )
+
