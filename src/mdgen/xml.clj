@@ -42,7 +42,7 @@
   [loc & args]
   (loop [res loc preds args]
     (let [pred (first preds)]
-      (if (= nil pred) res)
+      (if (nil? pred) res)
       (cond
         (= nil pred) res
         (= (type pred) java.lang.Long) (recur (nth res pred nil) (rest preds))
@@ -54,3 +54,15 @@
    )
  )
 
+(defmacro tm00
+  "Test if function passed through and can still be invoked"
+  [arg]
+  `(let [f# ~arg] (f# "hello world"))
+   )
+
+(defmacro tm01
+  "Test if function passed into rest and can still be called"
+  [& more]
+  (println (type more) more)
+  `(let [f# '~more f# (first f#)] ((resolve f#) "hello world"))
+  )
