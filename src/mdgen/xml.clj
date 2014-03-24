@@ -12,57 +12,102 @@
     (xml/parse ins)))
 
 
-(defn get-node
-  "Return a lazy seq of matching nodes"
-  ([node tag]
-	  (for [x (xml-seq node) :when (= tag (:tag x))]
-	    x))
-  ([node tag val]
-    (for [x (xml-seq node) 
-          :when (and (= tag (:tag x)) (= val (-> x :content first)))]
-      x)))
+(defn read->loc
+  "Similar to read->root but return the location (zipper) of root node"
+  [fname]
+  (zip/xml-zip (read->root fname)))
 
-(defn query
-  "Similar to xml-> but takes a node instead of loc. Returns a lazy seq."
-  [node & args]
-  (apply zfx/xml-> (zip/xml-zip node) args))
-
-(defn query1
-  "Take the first element from the query result"
-  [& args]
-  (first (apply query args)))
-
-(defn edit
-  [root & args]
-  (zip/root (zip/edit (apply query1 root args) #(assoc % :content ["Changed"])))
-)
 
 (defn x->
   "Similar to clojure.data.zip/xml-> with the ability to take integer index as index filter"
   [loc & args]
   (loop [res loc preds args]
     (let [pred (first preds)]
-      (if (nil? pred) res)
       (cond
-        (= nil pred) res
-        (= (type pred) java.lang.Long) (recur (nth res pred nil) (rest preds))
-        (= (type res) clojure.lang.PersistentVector)
+        (nil? pred) res
+        (number? pred) 
+          (recur (->> res (drop pred) (take 1)) (rest preds))
+        (vector? res)
           (recur (zfx/xml-> res pred) (rest preds))
-        :else (recur (mapcat #(zfx/xml-> % pred) res) (rest preds))
-        )
-     )
-   )
- )
+        :else (recur (mapcat #(zfx/xml-> % pred) res) (rest preds))))))
 
-(defmacro tm00
-  "Test if function passed through and can still be invoked"
-  [arg]
-  `(let [f# ~arg] (f# "hello world"))
-   )
 
-(defmacro tm01
-  "Test if function passed into rest and can still be called"
-  [& more]
-  (println (type more) more)
-  `(let [f# '~more f# (first f#)] ((resolve f#) "hello world"))
-  )
+(defn x1->
+  "Similar to x-> but guarantee to return a single location"
+  [loc & args]
+  (first (apply x-> loc args)))
+
+
+(defn ed-text
+  "Edit text of the node at given location"
+  [loc text & args]
+  (zip/edit loc #(assoc % :content %2) 
+            (if (some #{:append} args) 
+              (conj (-> loc first :content) text)
+              (vector text))))
+  
+
+(defn insert-child
+  "Insert a child node at the given location based on the given position."
+  ([loc node pos]
+    (let [children (zf/children loc)
+          nchildren (count children)]
+      (cond 
+        (or (= pos :last) (>= pos nchildren)) (zip/append-child loc node)
+        (zero? pos) (zip/insert-child loc node)
+        :else (let [child (first (drop pos children))]
+                (zip/insert-right child node)
+                loc))))
+  ([loc node]
+    (insert-child loc node 0)))
+
+(defn insert-left
+  "Insert a node to the left on the given location"
+  [loc node]
+  (zip/insert-left loc node))
+
+(defn insert-right
+  "Insert a node to the right on the given location"
+  [loc node]
+  (zip/insert-right loc node))
+
+
+(defn make-node
+  "Make an node based on given tag, attrs and content"
+  [tag attrs content]
+  (struct xml/element tag attrs
+          (if (vector? content) 
+            content 
+            (vector content))))
+
+
+
+(defn emit-element [e]
+  (if (string? e)
+    (print e)
+    (do
+      (print (str "<" (name (:tag e))))
+      (when (:attrs e)
+        (doseq [attr (:attrs e)]
+          (print (str " " (name (key attr)) "=\"" (val attr) \"))))
+      (if (:content e)
+        (do
+          (println ">")
+          (doseq [c (:content e)]
+            (emit-element c))
+          (println (str "</" (name (:tag e)) ">")))
+        (println "/>")))))
+  
+
+(defn emit
+  [node]
+  (println "<?xml version=\"1.0\" encoding=\"utf-8\"?>")
+  (emit-element node))
+
+
+(defn write-file
+  "Get the root node of the given loc and write out to the given file"
+  [fname loc]
+  (spit fname (with-out-str (emit (zip/root loc)))))
+  
+
