@@ -45,7 +45,8 @@
                 (vector text)))))
   
 (defn insert-child
-  "Insert a child node at the given location based on the given position."
+  "Insert a child node at the given location based on the given position.
+   Without moving the location."
   ([loc node pos]
     (let [children (zf/children loc)
           nchildren (count children)]
@@ -53,8 +54,7 @@
         (or (= pos :last) (>= pos nchildren)) (zip/append-child loc node)
         (zero? pos) (zip/insert-child loc node)
         :else (let [child (first (drop pos children))]
-                (zip/insert-right child node)
-                loc))))
+                (zip/up (zip/insert-left child node))))))
   ([loc node]
     (insert-child loc node 0)))
 
