@@ -37,11 +37,12 @@
 
 (defn ed-text
   "Edit text of the node at given location"
-  [loc text & args]
-  (zip/edit loc #(assoc % :content %2) 
-            (if (some #{:append} args) 
-              (conj (-> loc first :content) text)
-              (vector text))))
+  [loc text & {:as opts}]
+  (let [append? (:append opts false)]
+    (zip/edit loc #(assoc % :content %2) 
+              (if append? 
+                (conj (-> loc first :content) text)
+                (vector text)))))
   
 (defn insert-child
   "Insert a child node at the given location based on the given position."
