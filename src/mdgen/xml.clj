@@ -76,6 +76,26 @@
             content 
             (vector content))))
 
+(defn insert-parent
+  "1. Create a node with given tag and attrs. 
+   2. Insert this node as parent at the given location.
+   3. Returns the location of the new parent node."
+  [loc tag attrs]
+  (let [p (make-node tag attrs (zip/node loc))]
+    (zip/replace loc p)))
+
+(defn move-node
+  "Move the node at given location as a child node at the second given location.
+   return the location moved node."
+  ([floc tloc pos]
+    (let [node (zip/node floc)
+          tloc (insert-child tloc node pos)]
+      (zip/remove floc)
+      (x1-> tloc zf/children pos)))
+  ([floc tloc]
+    (move-node floc tloc 0)))
+  
+
 (defn emit-element 
   "Modified version of emit-element from clojure.xml. 
    1. No EOLs are added into the tags surrounding text.
