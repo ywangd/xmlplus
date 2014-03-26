@@ -19,7 +19,6 @@
   (zip/xml-zip 
     (xml/parse (java.io.ByteArrayInputStream. (.getBytes s)))))
 
-
 (defn x->
   "Similar to clojure.data.zip/xml-> with the ability to take integer as index filter
    Note this function always returns a lazy seq even when index filter is used."
@@ -112,8 +111,10 @@
       (zip/remove floc)
       (x1-> tloc zf/children pos)))
   ([floc tloc]
-    (move-node floc tloc 0)))
-  
+    ; need to take care of both cases when argument is loc or (path)
+    )
+
+  )  
 
 (defn emit-element 
   "Modified version of emit-element from clojure.xml. 
