@@ -1,9 +1,9 @@
 (ns mdgen.xml
- (:require [clojure.zip :as zip]
-           [clojure.xml :as xml]
-           [clojure.java.io :as io]
-           [clojure.data.zip :as zf]
-           [clojure.data.zip.xml :as zfx]))
+  (:require [clojure.zip :as zip]
+            [clojure.xml :as xml]
+            [clojure.java.io :as io]
+            [clojure.data.zip :as zf]
+            [clojure.data.zip.xml :as zfx]))
 
 
 (defn parse-file
@@ -124,7 +124,7 @@
         (let [trz (-> tloc zip/root zip/xml-zip)
               trz-del (-> (apply x1-> trz fpath) zip/remove zip/root zip/xml-zip)
               tloc (insert-child (apply x1-> trz-del tpath) node pos)]
-          (x1-> tloc zf/children pos))
+          (x1-> tloc zf/children-auto pos))
         (throw (IllegalArgumentException. ": floc cannot be ancestor of tloc.\n")) )))
   ([floc tloc]
     (move-node floc tloc 0)))  
