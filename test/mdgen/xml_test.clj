@@ -60,6 +60,9 @@
 </gmd:MD_Metadata>
 "))
 
+(deftest test-x->
+  (testing "Return the location packed into a sequence if no filter is given"
+           (is (= (first (x-> l1)) l1))))
 
 (deftest test-x1->
   (testing "basic test for pure delegation to clojure.data.zip.xml/xml->"

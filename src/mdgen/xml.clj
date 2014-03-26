@@ -21,12 +21,13 @@
 
 (defn x->
   "Similar to clojure.data.zip/xml-> with the ability to take integer as index filter
-   Note this function always returns a lazy seq even when index filter is used."
+   Note this function always returns a lazy seq even when index filter is used.
+   Always return a lazy sequence."
   [loc & args]
   (loop [res loc preds args]
     (let [pred (first preds)]
       (cond
-        (nil? pred) res
+        (nil? pred) (if (seq? res) res (lazy-seq (conj () res)))
         (number? pred) 
           (recur (->> res (drop pred) (take 1)) (rest preds))
         (vector? res)
@@ -107,8 +108,10 @@
    return the location moved node."
   ([floc tloc pos]
     (let [node (zip/node floc)
-          tloc (insert-child tloc node pos)]
-      (zip/remove floc)
+          fpath (rpath floc)
+          tpath (rpath tloc)
+          z (-> (apply x1-> (-> tloc zip/root zip/xml-zip) fpath) zip/remove zip/root zip/xml-zip)
+          tloc (insert-child (apply x1-> z tpath) node pos)]
       (x1-> tloc zf/children pos)))
   ([floc tloc]
     ; need to take care of both cases when argument is loc or (path)
