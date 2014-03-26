@@ -5,16 +5,20 @@
            [clojure.data.zip :as zf]
            [clojure.data.zip.xml :as zfx]))
 
-(defn read->root
-  "Read a given xml file and return the root node"
-  [fname]
-  (with-open [ins (io/input-stream fname)]
-    (xml/parse ins)))
 
-(defn read->loc
-  "Similar to read->root but return the location (zipper) of root node"
+(defn parse-file
+  "Parse a given xml file and return location of the root"
   [fname]
-  (zip/xml-zip (read->root fname)))
+  (zip/xml-zip 
+    (with-open [ins (io/input-stream fname)]
+      (xml/parse ins))))
+
+(defn parse-str
+  "Parse a given xml string and return location of the root"
+  [s]
+  (zip/xml-zip 
+    (xml/parse (java.io.ByteArrayInputStream. (.getBytes s)))))
+
 
 (defn x->
   "Similar to clojure.data.zip/xml-> with the ability to take integer as index filter
@@ -35,6 +39,21 @@
   [loc & args]
   (first (apply x-> loc args)))
 
+(defn rpath
+  "Get the complete path to root node from given loc. 
+   The path can be used as arguments to x-> and get the loc back."
+  [loc]
+  (flatten
+    (for [ancestor (-> (zf/ancestors loc) butlast reverse)]
+      (do 
+        (let [tag (-> ancestor first :tag)
+              left (-> ancestor second :l)
+              cnt (count (filter #(= tag (:tag %)) left))
+              ]
+          (if (> cnt 0)
+            [tag cnt]
+            tag))))))
+          
 (defn ed-text
   "Edit text of the node at given location"
   [loc text & {:as opts}]
