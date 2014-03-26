@@ -15,7 +15,7 @@
 
 (defn parse-str
   "Parse a given xml string and return location of the root"
-  [s]
+  [^String s]
   (zip/xml-zip 
     (xml/parse (java.io.ByteArrayInputStream. (.getBytes s)))))
 
