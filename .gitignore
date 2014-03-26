@@ -1,6 +1,7 @@
 .classpath
 .idea
 .project
+.settings
 mdgen.iml
 /target
 /classes
