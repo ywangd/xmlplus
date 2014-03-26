@@ -103,21 +103,31 @@
   (let [p (make-node tag attrs (zip/node loc))]
     (zip/replace loc p)))
 
+(defn- f-t-path
+  "Make sure floc is not a anscentor of tloc. Otherwise it creates a infinite loop."
+  [floc tloc]
+  (let [fpath (rpath floc)
+        tpath (rpath tloc)
+        flen (count fpath)]
+    (if (= fpath (take flen tpath))
+      nil
+      [fpath tpath])))
+
 (defn move-node
   "Move the node at given location as a child node at the second given location.
    return the location moved node."
   ([floc tloc pos]
     (let [node (zip/node floc)
-          fpath (rpath floc)
-          tpath (rpath tloc)
-          z (-> (apply x1-> (-> tloc zip/root zip/xml-zip) fpath) zip/remove zip/root zip/xml-zip)
-          tloc (insert-child (apply x1-> z tpath) node pos)]
-      (x1-> tloc zf/children pos)))
+          [fpath tpath] (f-t-path floc tloc)
+          valid? (boolean fpath)]
+      (if valid? 
+        (let [trz (-> tloc zip/root zip/xml-zip)
+              trz-del (-> (apply x1-> trz fpath) zip/remove zip/root zip/xml-zip)
+              tloc (insert-child (apply x1-> trz-del tpath) node pos)]
+          (x1-> tloc zf/children pos))
+        (throw (IllegalArgumentException. ": floc cannot be ancestor of tloc.\n")) )))
   ([floc tloc]
-    ; need to take care of both cases when argument is loc or (path)
-    )
-
-  )  
+    (move-node floc tloc 0)))  
 
 (defn emit-element 
   "Modified version of emit-element from clojure.xml. 
