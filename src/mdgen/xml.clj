@@ -48,8 +48,7 @@
       (do 
         (let [tag (-> ancestor first :tag)
               left (-> ancestor second :l)
-              cnt (count (filter #(= tag (:tag %)) left))
-              ]
+              cnt (count (filter #(= tag (:tag %)) left))]
           (if (> cnt 0)
             [tag cnt]
             tag))))))
@@ -115,7 +114,7 @@
 
 (defn move-node
   "Move the node at given location as a child node at the second given location.
-   return the location moved node."
+   return the location of the moved node."
   ([floc tloc pos]
     (let [node (zip/node floc)
           [fpath tpath] (f-t-path floc tloc)
@@ -127,7 +126,17 @@
           (x1-> tloc zf/children-auto pos))
         (throw (IllegalArgumentException. ": floc cannot be ancestor of tloc.\n")) )))
   ([floc tloc]
-    (move-node floc tloc 0)))  
+    (move-node floc tloc 0)))
+
+(defn copy-node
+  "copy the node at given location as a child node at the second given location.
+return the location of the copied node"
+  ([floc tloc pos]
+    (let [node (zip/node floc)
+          loc (insert-child tloc node pos)]
+      (x1-> loc (:tag node) pos)))
+  ([floc tloc]
+    (copy-node floc tloc 0)))
 
 (defn emit-element 
   "Modified version of emit-element from clojure.xml. 
