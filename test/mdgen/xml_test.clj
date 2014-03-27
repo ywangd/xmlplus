@@ -96,7 +96,7 @@
 (testing "Result from rpath can be used to get the node back via x1->"
          (is (= (zip/node (apply x1-> l1 (rpath (x1-> l1 zf/descendants :gco:Date 1))))
                 '{:tag :gco:Date, :attrs nil, :content ["2012-06-15"]}))))
-  
+
   
   
   

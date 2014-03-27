@@ -53,14 +53,29 @@
             [tag cnt]
             tag))))))
           
-(defn ed-text
+(defn edit-tag
+  "Edit the tag of the node at given location."
+  [loc tag]
+  (zip/edit loc #(assoc % :tag tag)))
+
+(defn edit-text
   "Edit text of the node at given location"
-  [loc text & {:as opts}]
-  (let [append? (:append opts false)]
-    (zip/edit loc #(assoc % :content %2) 
-              (if append? 
-                (conj (-> loc first :content) text)
-                (vector text)))))
+  [loc text & {:as opts}] 
+  (let [append? (:append opts false)
+        ct (if append? (conj (-> loc first :content) text) (vector text))]
+    (zip/edit loc #(assoc % :content ct))))
+
+(defn edit-attrs
+  "Edit the attrs of the node at given location.
+  :dissoc [] to remove existing attrs."
+  [loc attrs & {:as opts}]
+  (let [ex-attrs (-> loc first :attrs)
+        loc (zip/edit loc #(assoc % :attrs (merge ex-attrs attrs)))
+        attrs (-> loc first :attrs)
+        dis (:dissoc opts nil)]
+    (if dis
+      (zip/edit loc #(assoc % :attrs (apply dissoc attrs dis)))
+      loc)))
   
 (defn insert-child
   "Insert a child node at the given location based on the given position.
@@ -130,7 +145,7 @@
 
 (defn copy-node
   "copy the node at given location as a child node at the second given location.
-return the location of the copied node"
+  return the location of the copied node"
   ([floc tloc pos]
     (let [node (zip/node floc)
           loc (insert-child tloc node pos)]
@@ -140,8 +155,8 @@ return the location of the copied node"
 
 (defn emit-element 
   "Modified version of emit-element from clojure.xml. 
-   1. No EOLs are added into the tags surrounding text.
-   2. Indent properly."
+  1. No EOLs are added into the tags surrounding text.
+  2. Indent properly."
   [e lev]
   (let [lead (apply str (repeat (* lev 4) \space))]
     (if (string? e)
