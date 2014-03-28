@@ -7,7 +7,6 @@
             [clojure.data.zip.xml :as zfx]))
 
 
-
 (def l1 (parse-str "<?xml version=\"1.0\" encoding=\"utf-8\"?>
 <gmd:MD_Metadata xmlns:gco=\"http://www.isotc211.org/2005/gco\" xmlns:gmd=\"http://www.isotc211.org/2005/gmd\">
     <gmd:fileIdentifier>
@@ -79,6 +78,28 @@
            (is (= (x1-> l1 zf/descendants :gco:Date 1 zip/node)
                   '{:tag :gco:Date, :attrs nil, :content ["2012-06-15"]}))))
 
+(deftest test-text-node?
+  (testing "True for a text node"
+           (is (-> l1 zip/down zip/down text-node?)))
+  (testing "False for a non-text node"
+           (is (-> l1 zip/down text-node? not))))
+
+(deftest test-edit-text
+  (is (= (let [new-l1 (-> (edit-text (-> l1 zip/down zip/down) "CHANGED") zip/root zip/xml-zip)]
+           (-> new-l1 zip/down zip/down first :content first))
+         "CHANGED")))
+
+(deftest test-move-node
+  (testing "basic test for moving node"
+           (is (let [floc (-> l1 zip/down)
+                     tloc (-> l1 zip/down zip/right zip/down)
+                     node (zip/node floc)]
+                 (= (-> (move-node floc tloc 1) zip/root zip/xml-zip zip/down zip/down zip/down zip/right zip/node) node))))
+  (testing "floc must not be ancestor of tloc"
+           (is (thrown? IllegalArgumentException
+                        (let [floc (-> l1 zip/down zip/right zip/down zip/down)
+                              tloc (-> floc zip/down zip/down zip/right)]
+                          (move-node floc tloc))))))
 
 (deftest test-rpath
   (testing "Test for integer filter"

@@ -39,6 +39,13 @@
   [loc & args]
   (first (apply x-> loc args)))
 
+(defn text-node?
+  [loc]
+  (let [content (get-in loc [0 :content])]
+    (if (every? string? content)
+      true
+      false)))
+
 (defn rpath
   "Get the complete path to root node from given loc. 
    The path can be used as arguments to x-> and get the loc back."
