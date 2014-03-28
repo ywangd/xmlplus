@@ -24,13 +24,38 @@
   [loc]
   (-> loc zip/root zip/xml-zip))
 
+(defn texts
+  "This function get texts from all descendant nodes at given location 
+  and return them as a lazy seq. Note this is different from 
+  clojure.data.zip.xml/text which returns a single concatenated string."
+  [loc]
+  (zfx/xml-> loc zf/descendants zip/node string?))
+
+(defn texts=
+  "Return a function to test whether given text is equal to the concatenation 
+  of all the texts under the given node."
+  [s]
+  (fn [loc] (= (apply str (texts loc)) s)))
+
+(defn text
+  "This function get only text directly belong to the node at given location"
+  [loc]
+  (apply str (filter string? (-> loc first :content))))
+
+(defn text=
+  "Predicate function to test if text directly belong to the given node is
+   equal to the given text."
+  [s]
+  (fn [loc] (= (text loc) s)))
+
 (defn x->
   "Similar to clojure.data.zip/xml-> with the ability to take integer as index filter
    Note this function always returns a lazy seq even when index filter is used.
    Always return a lazy sequence."
   [loc & args]
   (loop [res loc preds args]
-    (let [pred (first preds)]
+    (let [pred (first preds)
+          pred (if (string? pred) (text= pred) pred)]
       (cond
         (nil? pred) (if (seq? res) res (lazy-seq (conj () res)))
         (number? pred) 
@@ -69,30 +94,6 @@
               cnt (count (filter #(= tag (:tag %)) left))]
           (if (> cnt 0) [tag cnt] tag))))))
           
-(defn texts
-  "This function get texts from all descendant nodes at given location 
-  and return them as a lazy seq. Note this is different from 
-  clojure.data.zip.xml/text which returns a single concatenated string."
-  [loc]
-  (zfx/xml-> loc zf/descendants zip/node string?))
-
-(defn texts=
-  "Return a function to test whether given text is equal to the concatenation 
-  of all the texts under the given node."
-  [s]
-  (fn [loc] (= (apply str (texts loc)) s)))
-
-(defn text
-  "This function get only text directly belong to the node at given location"
-  [loc]
-  (apply str (filter string? (-> loc first :content))))
-
-(defn text=
-  "Predicate function to test if text directly belong to the given node is
-   equal to the given text."
-  [s]
-  (fn [loc] (= (text loc) s)))
-
 (defn edit-tag
   "Edit the tag of the node at given location."
   [loc tag]

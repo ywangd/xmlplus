@@ -125,7 +125,18 @@
 (deftest test-text=
   (testing "text= should only test for text directly belong to a node"
            (is (= (x1-> l1 zf/descendants (text= "2012-06-15") first)
+                  {:tag :gco:Date, :attrs nil, :content ["2012-06-15"]})))
+  (testing "shortcut for text="
+           (is (= (x1-> l1 zf/descendants "2012-06-15" first)
                   {:tag :gco:Date, :attrs nil, :content ["2012-06-15"]}))))
+
+(deftest test-texts=
+  (is (= (x1-> l1 zf/descendants (texts= "2012-06-15") first)
+         {:tag :gmd:date, 
+          :attrs nil, 
+          :content [{:tag :gco:Date, 
+                     :attrs nil, 
+                     :content ["2012-06-15"]}]})))
   
   
   
