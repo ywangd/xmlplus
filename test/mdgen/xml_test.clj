@@ -66,17 +66,17 @@
 (deftest test-x1->
   (testing "basic test for pure delegation to clojure.data.zip.xml/xml->"
            (is (= (first (x1-> l1 :gmd:fileIdentifier :gco:CharacterString))
-                  '{:tag :gco:CharacterString, :attrs nil, :content ["urn:x-wmo:md:int.wmo.wis::IOPL01AMMC"]} )))
+                  {:tag :gco:CharacterString, :attrs nil, :content ["urn:x-wmo:md:int.wmo.wis::IOPL01AMMC"]} )))
   
   (testing "test for integer filter"
            (is (= (first (x1-> l1 :gmd:identificationInfo :gmd:MD_DataIdentification 
                                :gmd:citation :gmd:CI_Citation 
                                :gmd:date 1 :gmd:CI_Date :gmd:date :gco:Date))
-                  '{:tag :gco:Date :attrs nil, :content ["2012-06-15"]} )))
+                  {:tag :gco:Date :attrs nil, :content ["2012-06-15"]} )))
   
   (testing "Composite test for integer filter and clojure.data.zip filters"
            (is (= (x1-> l1 zf/descendants :gco:Date 1 zip/node)
-                  '{:tag :gco:Date, :attrs nil, :content ["2012-06-15"]}))))
+                  {:tag :gco:Date, :attrs nil, :content ["2012-06-15"]}))))
 
 (deftest test-text-node?
   (testing "True for a text node"
@@ -112,17 +112,20 @@
                      1 
                      :gmd:CI_Date 
                      :gmd:date 
-                     :gco:Date) )))
+                     :gco:Date))))
 
   (testing "Result from rpath can be used to get the node back via x1->"
          (is (= (zip/node (apply x1-> l1 (rpath (x1-> l1 zf/descendants :gco:Date 1))))
-                '{:tag :gco:Date, :attrs nil, :content ["2012-06-15"]})))
+                {:tag :gco:Date, :attrs nil, :content ["2012-06-15"]})))
 
   (testing "Test the :include-root keyword"
            (is (= (cons :gmd:MD_Metadata (rpath (x1-> l1 zf/descendants :gco:Date 1)))
                   (rpath (x1-> l1 zf/descendants :gco:Date 1) :include-root true)))))
-
   
+(deftest test-text=
+  (testing "text= should only test for text directly belong to a node"
+           (is (= (x1-> l1 zf/descendants (text= "2012-06-15") first)
+                  {:tag :gco:Date, :attrs nil, :content ["2012-06-15"]}))))
   
   
   

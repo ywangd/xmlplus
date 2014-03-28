@@ -35,8 +35,9 @@
         (nil? pred) (if (seq? res) res (lazy-seq (conj () res)))
         (number? pred) 
           (recur (->> res (drop pred) (take 1)) (rest preds))
-        (vector? res)
+        (vector? res) ; single res of location type (vector)
           (recur (zfx/xml-> res pred) (rest preds))
+        ; lazy-seq of multiple res
         :else (recur (mapcat #(zfx/xml-> % pred) res) (rest preds))))))
 
 (defn x1->
@@ -45,11 +46,10 @@
   (first (apply x-> loc args)))
 
 (defn text-node?
+  "A node is a text node if some of its contents is string."
   [loc]
   (let [content (get-in loc [0 :content])]
-    (if (every? string? content)
-      true
-      false)))
+    (boolean (some string? content))))
 
 (defn rpath
   "Get the complete path to root node from given loc. 
@@ -69,6 +69,30 @@
               cnt (count (filter #(= tag (:tag %)) left))]
           (if (> cnt 0) [tag cnt] tag))))))
           
+(defn texts
+  "This function get texts from all descendant nodes at given location 
+  and return them as a lazy seq. Note this is different from 
+  clojure.data.zip.xml/text which returns a single concatenated string."
+  [loc]
+  (zfx/xml-> loc zf/descendants zip/node string?))
+
+(defn texts=
+  "Return a function to test whether given text is equal to the concatenation 
+  of all the texts under the given node."
+  [s]
+  (fn [loc] (= (apply str (texts loc)) s)))
+
+(defn text
+  "This function get only text directly belong to the node at given location"
+  [loc]
+  (apply str (filter string? (-> loc first :content))))
+
+(defn text=
+  "Predicate function to test if text directly belong to the given node is
+   equal to the given text."
+  [s]
+  (fn [loc] (= (text loc) s)))
+
 (defn edit-tag
   "Edit the tag of the node at given location."
   [loc tag]
