@@ -114,9 +114,13 @@
                      :gmd:date 
                      :gco:Date) )))
 
-(testing "Result from rpath can be used to get the node back via x1->"
+  (testing "Result from rpath can be used to get the node back via x1->"
          (is (= (zip/node (apply x1-> l1 (rpath (x1-> l1 zf/descendants :gco:Date 1))))
-                '{:tag :gco:Date, :attrs nil, :content ["2012-06-15"]}))))
+                '{:tag :gco:Date, :attrs nil, :content ["2012-06-15"]})))
+
+  (testing "Test the :include-root keyword"
+           (is (= (cons :gmd:MD_Metadata (rpath (x1-> l1 zf/descendants :gco:Date 1)))
+                  (rpath (x1-> l1 zf/descendants :gco:Date 1) :include-root true)))))
 
   
   

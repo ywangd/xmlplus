@@ -19,6 +19,11 @@
   (zip/xml-zip 
     (xml/parse (java.io.ByteArrayInputStream. (.getBytes s)))))
 
+(defn root-loc
+  "Get the root location of the given loc."
+  [loc]
+  (-> loc zip/root zip/xml-zip))
+
 (defn x->
   "Similar to clojure.data.zip/xml-> with the ability to take integer as index filter
    Note this function always returns a lazy seq even when index filter is used.
@@ -48,17 +53,21 @@
 
 (defn rpath
   "Get the complete path to root node from given loc. 
-   The path can be used as arguments to x-> and get the loc back."
-  [loc]
+  The path can be used as arguments to x-> and get the loc back.
+  By default, the path is composed by tags from root to the node at 
+  given location, but exclude the root node tag. This is because 
+  clojure.data.zip.xml/xml-> function does not require the root tag
+  as its arguments.
+  To change the default behaviour and include the root-tag, pass 
+  :include-root true to the function."
+  [loc & {:as opts}]
   (flatten
-    (for [ancestor (-> (zf/ancestors loc) butlast reverse)]
+    (for [ancestor (-> (zf/ancestors loc) ((if (:include-root opts) identity butlast)) reverse)]
       (do 
         (let [tag (-> ancestor first :tag)
               left (-> ancestor second :l)
               cnt (count (filter #(= tag (:tag %)) left))]
-          (if (> cnt 0)
-            [tag cnt]
-            tag))))))
+          (if (> cnt 0) [tag cnt] tag))))))
           
 (defn edit-tag
   "Edit the tag of the node at given location."
@@ -130,9 +139,7 @@
   (let [fpath (rpath floc)
         tpath (rpath tloc)
         flen (count fpath)]
-    (if (= fpath (take flen tpath))
-      nil
-      [fpath tpath])))
+    (if (= fpath (take flen tpath)) nil [fpath tpath])))
 
 (defn move-node
   "Move the node at given location as a child node at the second given location.
@@ -142,8 +149,8 @@
           [fpath tpath] (f-t-path floc tloc)
           valid? (boolean fpath)]
       (if valid? 
-        (let [trz (-> tloc zip/root zip/xml-zip)
-              trz-del (-> (apply x1-> trz fpath) zip/remove zip/root zip/xml-zip)
+        (let [trz (-> tloc root-loc)
+              trz-del (-> (apply x1-> trz fpath) zip/remove root-loc)
               tloc (insert-child (apply x1-> trz-del tpath) node pos)]
           (x1-> tloc zf/children-auto pos))
         (throw (IllegalArgumentException. ": floc cannot be ancestor of tloc.\n")) )))
