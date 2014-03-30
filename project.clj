@@ -6,4 +6,6 @@
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/data.zip "0.1.1"]
                  [org.clojure/data.xml "0.0.7"]
-                 [instaparse "1.3.0"]])
+                 [lein-light-nrepl "0.0.17"]
+                 [instaparse "1.3.0"]]
+  :repl-options {:nrepl-middleware [lighttable.nrepl.handler/lighttable-ops]})

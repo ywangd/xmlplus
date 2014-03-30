@@ -9,14 +9,14 @@
 (defn parse-file
   "Parse a given xml file and return location of the root"
   [fname]
-  (zip/xml-zip 
+  (zip/xml-zip
     (with-open [ins (io/input-stream fname)]
       (xml/parse ins))))
 
 (defn parse-str
   "Parse a given xml string and return location of the root"
   [^String s]
-  (zip/xml-zip 
+  (zip/xml-zip
     (xml/parse (java.io.ByteArrayInputStream. (.getBytes s)))))
 
 (defn root-loc
@@ -25,14 +25,14 @@
   (-> loc zip/root zip/xml-zip))
 
 (defn texts
-  "This function get texts from all descendant nodes at given location 
-  and return them as a lazy seq. Note this is different from 
+  "This function get texts from all descendant nodes at given location
+  and return them as a lazy seq. Note this is different from
   clojure.data.zip.xml/text which returns a single concatenated string."
   [loc]
   (zfx/xml-> loc zf/descendants zip/node string?))
 
 (defn texts=
-  "Return a function to test whether given text is equal to the concatenation 
+  "Return a function to test whether given text is equal to the concatenation
   of all the texts under the given node."
   [s]
   (fn [loc] (= (apply str (texts loc)) s)))
@@ -49,16 +49,16 @@
   (fn [loc] (= (text loc) s)))
 
 (defn x->
-  "Similar to clojure.data.zip/xml-> with the ability to take integer as index filter
-   Note this function always returns a lazy seq even when index filter is used.
-   Always return a lazy sequence."
+  "Similar to clojure.data.zip/xml-> with the ability to take integer
+  as index filter. Note this function always returns a lazy seq even
+  when index filter is used."
   [loc & args]
   (loop [res loc preds args]
     (let [pred (first preds)
           pred (if (string? pred) (text= pred) pred)]
       (cond
         (nil? pred) (if (seq? res) res (lazy-seq (conj () res)))
-        (number? pred) 
+        (number? pred)
           (recur (->> res (drop pred) (take 1)) (rest preds))
         (vector? res) ; single res of location type (vector)
           (recur (zfx/xml-> res pred) (rest preds))
@@ -71,29 +71,33 @@
   (first (apply x-> loc args)))
 
 (defn text-node?
-  "A node is a text node if some of its contents is string."
-  [loc]
-  (let [content (get-in loc [0 :content])]
-    (boolean (some string? content))))
+  "A node is a text node if some of its contents is string.
+  A more strict definition of text node requires all of its
+  contents are strings. This behaviour can be turned on by
+  setting the :pure keyword to true."
+  [loc & {:as opts}]
+  (let [pure (:pure opts false)
+        content (get-in loc [0 :content])]
+    (boolean ((if pure every? some) string? content))))
 
 (defn rpath
-  "Get the complete path to root node from given loc. 
+  "Get the complete path to root node from given loc.
   The path can be used as arguments to x-> and get the loc back.
-  By default, the path is composed by tags from root to the node at 
-  given location, but exclude the root node tag. This is because 
+  By default, the path is composed by tags from root to the node at
+  given location, but exclude the root node tag. This is because
   clojure.data.zip.xml/xml-> function does not require the root tag
   as its arguments.
-  To change the default behaviour and include the root-tag, pass 
+  To change the default behaviour and include the root-tag, pass
   :include-root true to the function."
   [loc & {:as opts}]
   (flatten
     (for [ancestor (-> (zf/ancestors loc) ((if (:include-root opts) identity butlast)) reverse)]
-      (do 
+      (do
         (let [tag (-> ancestor first :tag)
               left (-> ancestor second :l)
               cnt (count (filter #(= tag (:tag %)) left))]
           (if (> cnt 0) [tag cnt] tag))))))
-          
+
 (defn edit-tag
   "Edit the tag of the node at given location."
   [loc tag]
@@ -101,7 +105,7 @@
 
 (defn edit-text
   "Edit text of the node at given location"
-  [loc text & {:as opts}] 
+  [loc text & {:as opts}]
   (let [append? (:append opts false)
         ct (if append? (conj (-> loc first :content) text) (vector text))]
     (zip/edit loc #(assoc % :content ct))))
@@ -117,14 +121,14 @@
     (if dis
       (zip/edit loc #(assoc % :attrs (apply dissoc attrs dis)))
       loc)))
-  
+
 (defn insert-child
   "Insert a child node at the given location based on the given position.
    Without moving the location."
   ([loc node pos]
     (let [children (zf/children loc)
           nchildren (count children)]
-      (cond 
+      (cond
         (or (= pos :last) (>= pos nchildren)) (zip/append-child loc node)
         (zero? pos) (zip/insert-child loc node)
         :else (let [child (first (drop pos children))]
@@ -146,12 +150,12 @@
   "Make an node based on given tag, attrs and content"
   [tag attrs content]
   (struct xml/element tag attrs
-          (if (vector? content) 
-            content 
+          (if (vector? content)
+            content
             (vector content))))
 
 (defn insert-parent
-  "1. Create a node with given tag and attrs. 
+  "1. Create a node with given tag and attrs.
    2. Insert this node as parent at the given location.
    3. Returns the location of the new parent node."
   [loc tag attrs]
@@ -173,7 +177,7 @@
     (let [node (zip/node floc)
           [fpath tpath] (f-t-path floc tloc)
           valid? (boolean fpath)]
-      (if valid? 
+      (if valid?
         (let [trz (-> tloc root-loc)
               trz-del (-> (apply x1-> trz fpath) zip/remove root-loc)
               tloc (insert-child (apply x1-> trz-del tpath) node pos)]
@@ -192,8 +196,8 @@
   ([floc tloc]
     (copy-node floc tloc 0)))
 
-(defn emit-element 
-  "Modified version of emit-element from clojure.xml. 
+(defn emit-element
+  "Modified version of emit-element from clojure.xml.
   1. No EOLs are added into the tags surrounding text.
   2. Indent properly."
   [e lev]
@@ -201,7 +205,7 @@
     (if (string? e)
       (print e)
       (do
-        (let [tag (name (:tag e)) 
+        (let [tag (name (:tag e))
               nottxt (not (every? string? (:content e)))]
           (print (str lead "<" tag))
           (when (:attrs e)
@@ -213,8 +217,8 @@
               (if nottxt (print "\n"))
               (doseq [c (:content e)]
                 (emit-element c (+ lev 1)))
-              (if nottxt 
-                (print (str lead "</" tag ">\n")) 
+              (if nottxt
+                (print (str lead "</" tag ">\n"))
                 (print (str "</" tag ">\n"))))
             (print "/>\n")))))))
 
@@ -228,5 +232,5 @@
   "Get the root node of the given loc and write out to the given file"
   [fname loc]
   (spit fname (with-out-str (emit (zip/root loc)))))
-  
+
 

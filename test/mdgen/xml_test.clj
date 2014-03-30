@@ -67,13 +67,13 @@
   (testing "basic test for pure delegation to clojure.data.zip.xml/xml->"
            (is (= (first (x1-> l1 :gmd:fileIdentifier :gco:CharacterString))
                   {:tag :gco:CharacterString, :attrs nil, :content ["urn:x-wmo:md:int.wmo.wis::IOPL01AMMC"]} )))
-  
+
   (testing "test for integer filter"
-           (is (= (first (x1-> l1 :gmd:identificationInfo :gmd:MD_DataIdentification 
-                               :gmd:citation :gmd:CI_Citation 
+           (is (= (first (x1-> l1 :gmd:identificationInfo :gmd:MD_DataIdentification
+                               :gmd:citation :gmd:CI_Citation
                                :gmd:date 1 :gmd:CI_Date :gmd:date :gco:Date))
                   {:tag :gco:Date :attrs nil, :content ["2012-06-15"]} )))
-  
+
   (testing "Composite test for integer filter and clojure.data.zip filters"
            (is (= (x1-> l1 zf/descendants :gco:Date 1 zip/node)
                   {:tag :gco:Date, :attrs nil, :content ["2012-06-15"]}))))
@@ -82,7 +82,10 @@
   (testing "True for a text node"
            (is (-> l1 zip/down zip/down text-node?)))
   (testing "False for a non-text node"
-           (is (-> l1 zip/down text-node? not))))
+           (is (-> l1 zip/down text-node? not)))
+  (testing "Test :pure keyword"
+           (is (let [loc (edit-text l1 "some text" :append true)]
+                 (and (text-node? loc) (not (text-node? loc :pure true)))))))
 
 (deftest test-edit-text
   (is (= (let [new-l1 (-> (edit-text (-> l1 zip/down zip/down) "CHANGED") zip/root zip/xml-zip)]
@@ -104,14 +107,14 @@
 (deftest test-rpath
   (testing "Test for integer filter"
            (is (= (rpath (x1-> l1 zf/descendants :gco:Date 1))
-                  '(:gmd:identificationInfo 
+                  '(:gmd:identificationInfo
                      :gmd:MD_DataIdentification
-                     :gmd:citation 
+                     :gmd:citation
                      :gmd:CI_Citation
-                     :gmd:date 
-                     1 
-                     :gmd:CI_Date 
-                     :gmd:date 
+                     :gmd:date
+                     1
+                     :gmd:CI_Date
+                     :gmd:date
                      :gco:Date))))
 
   (testing "Result from rpath can be used to get the node back via x1->"
@@ -121,7 +124,7 @@
   (testing "Test the :include-root keyword"
            (is (= (cons :gmd:MD_Metadata (rpath (x1-> l1 zf/descendants :gco:Date 1)))
                   (rpath (x1-> l1 zf/descendants :gco:Date 1) :include-root true)))))
-  
+
 (deftest test-text=
   (testing "text= should only test for text directly belong to a node"
            (is (= (x1-> l1 zf/descendants (text= "2012-06-15") first)
@@ -132,11 +135,11 @@
 
 (deftest test-texts=
   (is (= (x1-> l1 zf/descendants (texts= "2012-06-15") first)
-         {:tag :gmd:date, 
-          :attrs nil, 
-          :content [{:tag :gco:Date, 
-                     :attrs nil, 
+         {:tag :gmd:date,
+          :attrs nil,
+          :content [{:tag :gco:Date,
+                     :attrs nil,
                      :content ["2012-06-15"]}]})))
-  
-  
-  
+
+
+
