@@ -6,9 +6,18 @@
             [clojure.data.zip :as zf]
             [clojure.data.zip.xml :as zfx]
             [clojure.data.json :as json]
+            [clojurewerkz.propertied.properties :as props]
             [clojure.pprint :refer [pprint]]))
 
-(-> "wcmp13-template.xml" io/resource io/file parse-file)
+
+(def config
+  (let [m (-> "mdgen.properties" io/resource props/load-from props/properties->map)]
+    (into {} (mapcat #(vector [(keyword (% 0)) (% 1)]) m))))
+
+
+(def wcmp13-template
+  (-> "wcmp13-template.xml" io/resource io/file parse-file))
+
 
 (defn gen-wcmp13-from-draft
   "Create the WCMP 1.3 compatible metadata record using the given
@@ -16,13 +25,30 @@
   [urn date])
 
 
-(defn info-ahl
-  "Get the decoded message for the given abbreviated heading line (AHL),
-  i.e. TTAAiiCCCC code."
-  [ahl])
+(defn- ahl-decoder-url
+  "Populate the decoder url with the given AHL code."
+  [base-url code]
+  (format (str base-url "?code=%s&json") code))
 
-(def info (with-open [rdr (io/reader "http://wisadmn-d.bom.gov.au/mdmon/mdcheck/decoded?code=SSVX13LFVW&json")]
+(defn info-ahl
+  "Get the decoded message as json for the given abbreviated heading line (AHL),
+  i.e. TTAAiiCCCC code."
+  [code]
+  (with-open [rdr (io/reader (decoder-url (:ahlDecoderUrl config) code))]
   (let [msg (apply str (line-seq rdr))]
     (json/read-str msg))))
+
+
+(let [msg (info-ahl "SSVX13LFVW")
+      ks (keys msg)]
+  (loop [k (first ks) r (rest ks)]
+    (if (boolean k)
+      (do
+        (println k (get msg k))
+        (recur (first r) (rest r))))))
+
+
+
+
 
 
