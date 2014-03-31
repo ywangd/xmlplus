@@ -8,9 +8,9 @@
 
 (defn parse-file
   "Parse a given xml file and return location of the root"
-  [fname]
+  [file]
   (zip/xml-zip
-    (with-open [ins (io/input-stream fname)]
+    (with-open [ins (io/input-stream file)]
       (xml/parse ins))))
 
 (defn parse-str

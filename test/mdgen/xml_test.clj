@@ -97,7 +97,9 @@
            (is (let [floc (-> l1 zip/down)
                      tloc (-> l1 zip/down zip/right zip/down)
                      node (zip/node floc)]
-                 (= (-> (move-node floc tloc 1) zip/root zip/xml-zip zip/down zip/down zip/down zip/right zip/node) node))))
+                 (= (-> (move-node floc tloc 1)
+                        zip/root zip/xml-zip zip/down zip/down zip/down zip/right zip/node)
+                    node))))
   (testing "floc must not be ancestor of tloc"
            (is (thrown? IllegalArgumentException
                         (let [floc (-> l1 zip/down zip/right zip/down zip/down)
@@ -140,6 +142,9 @@
           :content [{:tag :gco:Date,
                      :attrs nil,
                      :content ["2012-06-15"]}]})))
+
+(run-tests *ns*)
+
 
 
 

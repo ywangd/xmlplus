@@ -1,0 +1,49 @@
+<gmd:CI_ResponsibleParty id="publisher">
+    <gmd:organisationName>
+        <gco:CharacterString>NMC AUSTRALIA - Bureau of Meteorology</gco:CharacterString>
+    </gmd:organisationName>
+    <gmd:contactInfo>
+        <gmd:CI_Contact>
+            <gmd:phone>
+                <gmd:CI_Telephone>
+                    <gmd:voice>
+                        <gco:CharacterString>T+61 396694000</gco:CharacterString>
+                    </gmd:voice>
+                    <gmd:facsimile>
+                        <gco:CharacterString>F+61 396694699</gco:CharacterString>
+                    </gmd:facsimile>
+                </gmd:CI_Telephone>
+            </gmd:phone>
+            <gmd:address>
+                <gmd:CI_Address>
+                    <gmd:deliveryPoint>
+                        <gco:CharacterString>GPO Box 1289, 700 Collins Street Docklands</gco:CharacterString>
+                    </gmd:deliveryPoint>
+                    <gmd:city>
+                        <gco:CharacterString>MELBOURNE</gco:CharacterString>
+                    </gmd:city>
+                    <gmd:postalCode>
+                        <gco:CharacterString>VIC 3001</gco:CharacterString>
+                    </gmd:postalCode>
+                    <gmd:country>
+                        <gco:CharacterString>AUSTRALIA</gco:CharacterString>
+                    </gmd:country>
+                    <gmd:electronicMailAddress>
+                        <gco:CharacterString>gisc-md@bom.gov.au</gco:CharacterString>
+                    </gmd:electronicMailAddress>
+                </gmd:CI_Address>
+            </gmd:address>
+            <gmd:onlineResource>
+                <gmd:CI_OnlineResource>
+                    <gmd:linkage>
+                        <gmd:URL>http://www.bom.gov.au/</gmd:URL>
+                    </gmd:linkage>
+                </gmd:CI_OnlineResource>
+            </gmd:onlineResource>
+        </gmd:CI_Contact>
+    </gmd:contactInfo>
+    <test></test>
+    <gmd:role>
+        <gmd:CI_RoleCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/gmxCodelists.xml#CI_RoleCode" codeListValue="pointOfContact">pointOfContact</gmd:CI_RoleCode>
+    </gmd:role>
+</gmd:CI_ResponsibleParty>
