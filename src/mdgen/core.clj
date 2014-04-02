@@ -34,9 +34,12 @@
   "Get the decoded message as json for the given abbreviated heading line (AHL),
   i.e. TTAAiiCCCC code."
   [code]
-  (with-open [rdr (io/reader (decoder-url (:ahlDecoderUrl config) code))]
+  (with-open [rdr (io/reader (ahl-decoder-url (:ahlDecoderUrl config) code))]
   (let [msg (apply str (line-seq rdr))]
     (json/read-str msg))))
+
+
+(x-> wcmp13-template zf/descendants empty-node? zip/node)
 
 
 (let [msg (info-ahl "SSVX13LFVW")

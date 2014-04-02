@@ -81,6 +81,15 @@
   [loc & args]
   (apply x1-> (zf/auto false loc) args))
 
+(defn empty-node?
+  "An empty node is one that has no subtree or string content,
+  i.e. content is nil."
+  [loc]
+  (if (string? (loc 0))
+    false
+    (let [content (get-in loc [0 :content])]
+      (nil? content))))
+
 (defn text-node?
   "A node is a text node if some of its contents is string.
   A more strict definition of text node requires all of its
