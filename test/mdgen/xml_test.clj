@@ -59,6 +59,7 @@
             </gmd:descriptiveKeywords>
         </gmd:MD_DataIdentification>
     </gmd:identificationInfo>
+    <gmd:metadataExtensionInfo gco:nilReason=\"missing\"/>
 </gmd:MD_Metadata>
 "))
 
@@ -104,6 +105,20 @@
            :gmd:keyword
            2
            :gco:CharacterString))))
+
+(deftest test-not-filled?
+  (testing "The gmd:metadataExtensionInfo is returned when search only for empty-node?"
+    (is (= (rpath (second (x-> l1 zf/descendants empty-node?)))
+           '(:gmd:metadataExtensionInfo))))
+  (testing "gmd:metadataExtensionInfo is not returned if search for not-filled? node"
+    (is (= (rpath (x1-> l1 zf/descendants (not-filled? [:gco:nilReason "missing"])))
+           '(:gmd:identificationInfo
+             :gmd:MD_DataIdentification
+             :gmd:descriptiveKeywords
+             :gmd:MD_Keywords
+             :gmd:keyword
+             2
+             :gco:CharacterString)))))
 
 (deftest test-edit-text
   (is (= (let [new-l1 (-> (edit-text (-> l1 zip/down zip/down) "CHANGED") zip/root zip/xml-zip)]
