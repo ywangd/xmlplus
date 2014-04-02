@@ -90,6 +90,21 @@
     (let [content (get-in loc [0 :content])]
       (nil? content))))
 
+(defn filled?
+  "Similar to mdgen.xml/empty-node? but excluding valid empty nodes, i.e. nodes
+  with attributes indicating it shall be empty."
+  [& attr-kvs]
+  (println attr-kvs)
+  (fn [loc]
+    (if (empty-node? loc)
+      (some #{true} (for [attr-kv attr-kvs] ((apply zfx/attr= attr-kv) loc)))
+      true)))
+
+(defn not-filled?
+  "Just a wrapper of filled? to give the opposite answer"
+  [& attr-kvs]
+  (complement (apply filled? attr-kvs)))
+
 (defn text-node?
   "A node is a text node if some of its contents is string.
   A more strict definition of text node requires all of its

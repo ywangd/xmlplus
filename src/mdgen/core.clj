@@ -15,8 +15,8 @@
     (into {} (mapcat #(vector [(keyword (% 0)) (% 1)]) m))))
 
 
-(def wcmp13-template
-  (-> "wcmp13-template.xml" io/resource io/file parse-file))
+(def template-wcmp13-gx-au
+  (-> "md_templates/wcmp13_gx_au.xml" io/resource io/file parse-file))
 
 
 (defn gen-wcmp13-from-draft
@@ -39,8 +39,19 @@
     (json/read-str msg))))
 
 
-(x-> wcmp13-template zf/descendants empty-node? zip/node)
+(def q (not-filled? [:gco:nilReason "missing"] [:indeterminatePosition "now"]))
 
+
+(q (x1-> template-wcmp13-gx-au :gmd:fileIdentifier :gco:CharacterString))
+
+(x-> template-wcmp13-gx-au zf/descendants q (comp vector rpath))
+
+(x-> template-wcmp13-gx-au zf/descendants (complement (zfx/attr= :gco:nilReason "missing"))
+     empty-node? (comp vector rpath))
+
+
+
+(comment
 
 (let [msg (info-ahl "SSVX13LFVW")
       ks (keys msg)]
@@ -51,7 +62,4 @@
         (recur (first r) (rest r))))))
 
 
-
-
-
-
+)

@@ -49,6 +49,9 @@
                     <gmd:keyword>
                         <gco:CharacterString>meteorology</gco:CharacterString>
                     </gmd:keyword>
+                    <gmd:keyword>
+                        <gco:CharacterString></gco:CharacterString>
+                    </gmd:keyword>
                     <gmd:type>
                         <gmd:MD_KeywordTypeCode codeListValue=\"theme\">theme</gmd:MD_KeywordTypeCode>
                     </gmd:type>
@@ -91,6 +94,16 @@
   (testing "Test :pure keyword"
            (is (let [loc (edit-text l1 "some text" :append true)]
                  (and (text-node? loc) (not (text-node? loc :pure true)))))))
+
+(deftest test-empty-node?
+  (is (= (rpath (x1-> l1 zf/descendants empty-node?))
+         '(:gmd:identificationInfo
+           :gmd:MD_DataIdentification
+           :gmd:descriptiveKeywords
+           :gmd:MD_Keywords
+           :gmd:keyword
+           2
+           :gco:CharacterString))))
 
 (deftest test-edit-text
   (is (= (let [new-l1 (-> (edit-text (-> l1 zip/down zip/down) "CHANGED") zip/root zip/xml-zip)]
