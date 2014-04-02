@@ -70,6 +70,17 @@
   [loc & args]
   (first (apply x-> loc args)))
 
+(defn rx->
+  "Similar to x-> but always starts from the node at given location
+  instead of the child nodes."
+  [loc & args]
+  (apply x-> (zf/auto false loc) args))
+
+(defn rx1->
+  "Similar to x1-> but always starts from the node at given location."
+  [loc & args]
+  (apply x1-> (zf/auto false loc) args))
+
 (defn text-node?
   "A node is a text node if some of its contents is string.
   A more strict definition of text node requires all of its
