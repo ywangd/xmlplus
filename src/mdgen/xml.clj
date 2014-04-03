@@ -75,16 +75,10 @@
   [loc & args]
   (first (apply x-> loc args)))
 
-(defn rx->
-  "Similar to x-> but always starts from the node at given location
-  instead of the child nodes."
-  [loc & args]
-  (apply x-> (zf/auto false loc) args))
+; Similar to x-> and x1-> but starts the tag match from root node
+(def x->* #(apply x-> (zf/auto false %) %&))
+(def x1->* #(apply x1-> (zf/auto false %) %&))
 
-(defn rx1->
-  "Similar to x1-> but always starts from the node at given location."
-  [loc & args]
-  (apply x1-> (zf/auto false loc) args))
 
 (defn- empty-node?
   "An empty node is one that has no subtree or string content,
@@ -121,7 +115,7 @@
         content (get-in loc [0 :content])]
     (boolean ((if pure every? some) string? content))))
 
-(defn rpath
+(defn path
   "Get the complete path to root node from given loc.
   The path can be used as arguments to x-> and get the loc back.
   By default, the path is composed by tags from root to the node at
@@ -138,6 +132,9 @@
               left (-> ancestor second :l)
               cnt (count (filter #(= tag (:tag %)) left))]
           (if (> cnt 0) [tag cnt] tag))))))
+
+; Similar to path but always include root node tag
+(def path* #(path % :include-root true))
 
 (defn edit-tag
   "Edit the tag of the node at given location."
@@ -206,8 +203,8 @@
 (defn- f-t-path
   "Make sure floc is not a anscentor of tloc. Otherwise it creates a infinite loop."
   [floc tloc]
-  (let [fpath (rpath floc)
-        tpath (rpath tloc)
+  (let [fpath (path floc)
+        tpath (path tloc)
         flen (count fpath)]
     (if (= fpath (take flen tpath)) nil [fpath tpath])))
 

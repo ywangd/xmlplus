@@ -100,10 +100,10 @@
 (deftest test-not-filled?
   (testing "The gmd:metadataExtensionInfo is returned when search only for empty-node?
     The empty-node? function can be achieved by calling not-filled without arguments"
-    (is (= (rpath (second (x-> l1 zf/descendants (not-filled?))))
+    (is (= (path (second (x-> l1 zf/descendants (not-filled?))))
            '(:gmd:metadataExtensionInfo))))
   (testing "gmd:metadataExtensionInfo is not returned if search for not-filled? node"
-    (is (= (rpath (x1-> l1 zf/descendants (not-filled? [:gco:nilReason "missing"])))
+    (is (= (path (x1-> l1 zf/descendants (not-filled? [:gco:nilReason "missing"])))
            '(:gmd:identificationInfo
              :gmd:MD_DataIdentification
              :gmd:descriptiveKeywords
@@ -112,7 +112,7 @@
              2
              :gco:CharacterString))))
   (testing "Testing not-filled? works for both attr name and attr name/value pair"
-    (is (= (rpath (x1-> l1 zf/descendants (not-filled? :gco:nilReason)))
+    (is (= (path (x1-> l1 zf/descendants (not-filled? :gco:nilReason)))
            '(:gmd:identificationInfo
              :gmd:MD_DataIdentification
              :gmd:descriptiveKeywords
@@ -140,9 +140,9 @@
                               tloc (-> floc zip/down zip/down zip/right)]
                           (move-node floc tloc))))))
 
-(deftest test-rpath
+(deftest test-path
   (testing "Test for integer filter"
-           (is (= (rpath (x1-> l1 zf/descendants :gco:Date 1))
+           (is (= (path (x1-> l1 zf/descendants :gco:Date 1))
                   '(:gmd:identificationInfo
                      :gmd:MD_DataIdentification
                      :gmd:citation
@@ -153,13 +153,13 @@
                      :gmd:date
                      :gco:Date))))
 
-  (testing "Result from rpath can be used to get the node back via x1->"
-         (is (= (zip/node (apply x1-> l1 (rpath (x1-> l1 zf/descendants :gco:Date 1))))
+  (testing "Result from path can be used to get the node back via x1->"
+         (is (= (zip/node (apply x1-> l1 (path (x1-> l1 zf/descendants :gco:Date 1))))
                 {:tag :gco:Date, :attrs nil, :content ["2012-06-15"]})))
 
   (testing "Test the :include-root keyword"
-           (is (= (cons :gmd:MD_Metadata (rpath (x1-> l1 zf/descendants :gco:Date 1)))
-                  (rpath (x1-> l1 zf/descendants :gco:Date 1) :include-root true)))))
+           (is (= (cons :gmd:MD_Metadata (path (x1-> l1 zf/descendants :gco:Date 1)))
+                  (path (x1-> l1 zf/descendants :gco:Date 1) :include-root true)))))
 
 (deftest test-text=
   (testing "text= should only test for text directly belong to a node"
