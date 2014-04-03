@@ -48,6 +48,11 @@
   [s]
   (fn [loc] (= (text loc) s)))
 
+(defn attr?
+  "Returns function for checking whether the node at given loction has the given attribute"
+  [att]
+  (fn [loc] (boolean (some #{att} (-> loc zip/node :attrs keys)))))
+
 (defn x->
   "Similar to clojure.data.zip/xml-> with the ability to take integer
   as index filter. Note this function always returns a lazy seq even
@@ -81,7 +86,7 @@
   [loc & args]
   (apply x1-> (zf/auto false loc) args))
 
-(defn empty-node?
+(defn- empty-node?
   "An empty node is one that has no subtree or string content,
   i.e. content is nil."
   [loc]
@@ -91,19 +96,20 @@
       (nil? content))))
 
 (defn filled?
-  "Similar to mdgen.xml/empty-node? but excluding valid empty nodes, i.e. nodes
-  with attributes indicating it shall be empty."
-  [& attr-kvs]
-  (println attr-kvs)
+  "Returns a function to check whether the node at given location is filled.
+  It can be custmoized to return a function just like emdgen.xml/empty-node?
+  It can also take extra attributes to exclude valid empty nodes, i.e. nodes
+  with attributes indicating it should be empty."
+  [& attrs]
   (fn [loc]
-    (if (empty-node? loc)
-      (some #{true} (for [attr-kv attr-kvs] ((apply zfx/attr= attr-kv) loc)))
-      true)))
+    (let [att-filter (for [attr attrs] (if (vector? attr) (apply zfx/attr= attr) (attr? attr)))
+          all-filter (cons (complement empty-node?) att-filter)]
+      (boolean (some #{true} (for [f all-filter] (f loc)))))))
 
 (defn not-filled?
   "Just a wrapper of filled? to give the opposite answer"
-  [& attr-kvs]
-  (complement (apply filled? attr-kvs)))
+  [& attrs]
+  (complement (apply filled? attrs)))
 
 (defn text-node?
   "A node is a text node if some of its contents is string.

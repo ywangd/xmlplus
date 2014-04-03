@@ -96,22 +96,23 @@
            (is (let [loc (edit-text l1 "some text" :append true)]
                  (and (text-node? loc) (not (text-node? loc :pure true)))))))
 
-(deftest test-empty-node?
-  (is (= (rpath (x1-> l1 zf/descendants empty-node?))
-         '(:gmd:identificationInfo
-           :gmd:MD_DataIdentification
-           :gmd:descriptiveKeywords
-           :gmd:MD_Keywords
-           :gmd:keyword
-           2
-           :gco:CharacterString))))
 
 (deftest test-not-filled?
-  (testing "The gmd:metadataExtensionInfo is returned when search only for empty-node?"
-    (is (= (rpath (second (x-> l1 zf/descendants empty-node?)))
+  (testing "The gmd:metadataExtensionInfo is returned when search only for empty-node?
+    The empty-node? function can be achieved by calling not-filled without arguments"
+    (is (= (rpath (second (x-> l1 zf/descendants (not-filled?))))
            '(:gmd:metadataExtensionInfo))))
   (testing "gmd:metadataExtensionInfo is not returned if search for not-filled? node"
     (is (= (rpath (x1-> l1 zf/descendants (not-filled? [:gco:nilReason "missing"])))
+           '(:gmd:identificationInfo
+             :gmd:MD_DataIdentification
+             :gmd:descriptiveKeywords
+             :gmd:MD_Keywords
+             :gmd:keyword
+             2
+             :gco:CharacterString))))
+  (testing "Testing not-filled? works for both attr name and attr name/value pair"
+    (is (= (rpath (x1-> l1 zf/descendants (not-filled? :gco:nilReason)))
            '(:gmd:identificationInfo
              :gmd:MD_DataIdentification
              :gmd:descriptiveKeywords
