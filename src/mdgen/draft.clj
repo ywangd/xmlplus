@@ -22,10 +22,55 @@
   (-> "md_default_refs/wcmp13/gx_au.xml" io/resource io/file parse-file))
 
 
+;(info-ahl "SPAU32AMMC")
 
-(defn parse-ahl-msg
+(def dmsg
+  {"ii" [["Note" "See WMO-No.386 paragraph 2.3.2.2 for definition and use."]],
+   "CCCC" [["Location Name" "Melbourne/World Met. Centre"] ["Country Name" "Australia"]],
+   "T2" [["Data Type" "Special aviation weather reports"] ["Code Form" "FM 16 (SPECI)"]],
+   "T1" [["Data Type" "Surface data"] ["Priority" "2/4"]],
+   "A1" [["Country" "Australia"]],
+   "VolC1" [[
+             ["Region" 5]
+             ["RTH" "MELBOURNE"]
+             ["Country" "AUSTRALIA"]
+             ["Centre" "MELBOURNE"]
+             ["Date" "2013-10-21"]
+             ["TTAAii" "SPAU32"]
+             ["CCCC" "AMMC"]
+             ["Code Form" "FM 16-X EXT."]
+             ["Time Group" "AS REQUIRED"]
+             ["Content" "YAMB YBCG YBHM YBMA YBRK YBRM YCIN YFRT YMAV YMHB YMLT YPEA YPGV YPKG YPPD YSCB YSDU YSNF YSRI YWLM"]
+             ["Remarks" ""]]],
+   "A2" [["Country" "Australia"]]
+   :code "SPAU32AMMC"})
+
+(defn- code->parts
+  [code]
+  {:T1 (.substring code 0 1)
+   :T2 (.substring code 1 2)
+   :A1A2 (.substring code 2 4)
+   :ii (.substring code 4 6)
+   :CCCC (.substring code 6)
+   :TTAA (.substring code 0 4)})
+
+(defn- dmsg->title
+  [dmsg]
+  (let [{:keys [TTAA CCCC]} (code->parts (:code dmsg))]
+    {'(:gmd:MD_Metadata
+       :gmd:identificationInfo
+       :gmd:MD_DataIdentification
+       :gmd:citation
+       :gmd:CI_Citation
+       :gmd:title)
+    (format "%s collection available from %s as %s" TTAA CCCC (get-in dmsg ["T1" 0 1]))}))
+
+(dmsg->title dmsg)
+
+
+(defn parse-decoded-msg
   "Takes a decoded message of AHL code and use it to fill various XML elements."
-  [msg])
+  [dmsg])
 
 
 (defn draft->wcmp13
@@ -46,4 +91,7 @@
     2. The default reference record can be a single for records from the same
   organisation or country.
   "
-  [urn datestamp])
+  [urn datestamp]
+  {'(:gmd:MD_Metadata :gmd:fileIdentifier :gco:CharacterString) urn
+   '(:gmd:MD_Metadata :gmd:dateStamp :gco:DateTime) datestamp}
+  )

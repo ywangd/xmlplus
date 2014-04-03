@@ -26,7 +26,7 @@
   [code]
   (with-open [rdr (io/reader (ahl-decoder-url (:ahlDecoderUrl config) code))]
   (let [msg (apply str (line-seq rdr))]
-    (json/read-str msg))))
+    (merge {:code code} (json/read-str msg)))))
 
 
 (comment
