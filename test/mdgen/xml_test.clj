@@ -82,9 +82,9 @@
     (is (= (x1-> l1 zf/descendants :gco:Date 1 zip/node)
            {:tag :gco:Date, :attrs nil, :content ["2012-06-15"]}))))
 
-(deftest test-rx1->
+(deftest test-x1*->
   (testing "basic test to make sure it does starts from the root node"
-    (is (= (first (rx1-> l1 :gmd:MD_Metadata :gmd:fileIdentifier :gco:CharacterString))
+    (is (= (first (x1->* l1 :gmd:MD_Metadata :gmd:fileIdentifier :gco:CharacterString))
            {:tag :gco:CharacterString, :attrs nil, :content ["urn:x-wmo:md:int.wmo.wis::IOPL01AMMC"]}))))
 
 (deftest test-text-node?
@@ -176,6 +176,14 @@
           :content [{:tag :gco:Date,
                      :attrs nil,
                      :content ["2012-06-15"]}]})))
+
+(deftest test-convenient-func
+  (testing "z>>"
+    (is (= (x1-> l1 z>> :gmd:title)
+           (x1-> l1 zf/descendants :gmd:title))))
+  (testing "z>"
+    (is (= (x1-> l1 z>)
+           (x1-> l1 zf/children-auto)))))
 
 (run-tests *ns*)
 

@@ -18,3 +18,5 @@ pom.xml.asc
 .lein-deps-sum
 /bin
 *.swp
+temp*
+tmp*

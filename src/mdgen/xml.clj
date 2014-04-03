@@ -234,6 +234,28 @@
   ([floc tloc]
     (copy-node floc tloc 0)))
 
+; same as xpath child axis
+(def z> zf/children-auto)
+; same as xpath descendant axis
+(def z>> (comp rest zf/descendants))
+; child or self
+(defn z>+
+  [loc]
+  (lazy-seq (cons (zf/auto false loc) (zf/children-auto loc))))
+; descendant or self
+(def z>>+ zf/descendants)
+
+; parent
+(def z< zip/up)
+; parent or self
+(defn z<+
+  [loc]
+  (lazy-seq (cons (zf/auto false loc) (zip/up loc))))
+; ancestor
+(def z<< (comp rest zf/ancestors))
+; ancestor or self
+(def z<<+ zf/ancestors)
+
 (defn emit-element
   "Modified version of emit-element from clojure.xml.
   1. No EOLs are added into the tags surrounding text.
