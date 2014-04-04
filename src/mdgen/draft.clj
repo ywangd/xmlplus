@@ -1,5 +1,6 @@
 ; This module takes a draft record (essentially just its urn and datestamp)
-; and convert it to WCMP 1.3 compatible metadata record.
+; and populate a WCMP 1.3 compatible metadata record with the decoded message
+; of the AHL code.
 
 (ns mdgen.draft
   (:use [mdgen.xml]
@@ -10,14 +11,29 @@
             [clojure.data.zip.xml :as zfx]))
 
 
-; The reference metadata record
-(def default-ref
-  (-> "md_references/wcmp13/gx_au.xml" io/resource io/file parse-file))
+; The metadata template
+(def template
+  (-> "md_templates/wcmp13/gx.xml" io/resource io/file parse-file))
 
+
+(defn fill
+  [loc pth txt]
+  (let [lc (apply x1-> loc pth)]
+    (println (zip/node lc))
+    (root-loc (edit-text lc txt))))
+
+(def urn-pattern
+  "The WMO standard urn pattern for GTS data"
+  #"(?i)^urn:x-wmo:md:int.wmo.wis::([A-Z]{4}[0-9]{2}[A-Z]{4})$")
+
+(defn urn->ahl
+  "Get the AHL code part out of the urn. It also validates the urn."
+  [urn]
+  (second (re-find urn-pattern urn)))
 
 ;(info-ahl "SPAU32AMMC")
 
-(def dmsg
+(def msg
   {"ii" [["Note" "See WMO-No.386 paragraph 2.3.2.2 for definition and use."]],
    "CCCC" [["Location Name" "Melbourne/World Met. Centre"] ["Country Name" "Australia"]],
    "T2" [["Data Type" "Special aviation weather reports"] ["Code Form" "FM 16 (SPECI)"]],
@@ -36,30 +52,65 @@
              ["Content" "YAMB YBCG YBHM YBMA YBRK YBRM YCIN YFRT YMAV YMHB YMLT YPEA YPGV YPKG YPPD YSCB YSDU YSNF YSRI YWLM"]
              ["Remarks" ""]]],
    "A2" [["Country" "Australia"]]
-   :code "SPAU32AMMC"})
+   :ahl "SPAU32AMMC"})
 
-(defn- code->parts
-  [code]
-  {:T1 (.substring code 0 1)
-   :T2 (.substring code 1 2)
-   :A1A2 (.substring code 2 4)
-   :ii (.substring code 4 6)
-   :CCCC (.substring code 6)
-   :TTAA (.substring code 0 4)})
+(defn- ahl->parts
+  [ahl]
+  {:T1 (.substring ahl 0 1)
+   :T2 (.substring ahl 1 2)
+   :A1A2 (.substring ahl 2 4)
+   :ii (.substring ahl 4 6)
+   :CCCC (.substring ahl 6)
+   :TTAA (.substring ahl 0 4)})
 
-(defn- dmsg->title
-  [dmsg]
-  (let [{:keys [TTAA CCCC]} (code->parts (:code dmsg))]
-    {'(:gmd:MD_Metadata
-       :gmd:identificationInfo
-       :gmd:MD_DataIdentification
-       :gmd:citation
-       :gmd:CI_Citation
-       :gmd:title
-       :gco:CharacterString)
-    (format "%s collection available from %s as %s" TTAA CCCC (get-in dmsg ["T1" 0 1]))}))
+(defn- msg->title
+  [msg]
+  (let [{:keys [TTAA CCCC]} (ahl->parts (:ahl msg))]
+    (format "%s collection available from %s as %s" TTAA CCCC (get-in msg ["T1" 0 1]))))
 
-(dmsg->title dmsg)
+(msg->title msg)
+
+
+(defn parse-decoded-msg
+  "Takes a decoded message of AHL code and use it to fill various XML elements."
+  [msg])
+
+
+(def paths
+  {:urn [:gmd:fileIdentifier z>]
+   :datestamp [:gmd:dateStamp :gco:DateTime]
+   :title [:gmd:identificationInfo z> :gmd:citation z> :gmd:title z>]})
+
+
+
+(defn draft->wcmp13
+  "Create the WCMP 1.3 compatible metadata record using the given urn and
+  dateStamp with the help of a template, AHL decoded message:
+
+  1. Create the record using a WCMP13 template, elements are mostly empty.
+  2. Fill the template with AHL decoded message.
+  "
+  [urn datestamp]
+  (if-let [ahl (urn->ahl urn)]
+    (let [msg mdgen.draft/msg ;(info-ahl ahl)
+          md template
+          md (fill md (:urn paths) urn)
+          md (fill md (:datestamp paths) datestamp)
+          md (fill md (:title paths) (msg->title msg))
+          ]
+      md)))
+
+
+
+(def md
+  (draft->wcmp13 "urn:x-wmo:md:int.wmo.wis::SPAU32AMMC" "2013-10-21T00:00:00Z"))
+
+
+(emit (zip/node md))
+
+
+(x1-> template :gmd:identificationInfo z> :gmd:citation z> :gmd:title z>)
+
 
 
 ; This is the most critical function. Here is a list of elements that need to
@@ -101,29 +152,3 @@
 ; (:gmd:MD_Metadata :gmd:distributionInfo :gmd:MD_Distribution :gmd:distributionFormat :gmd:MD_Format :gmd:name :gco:CharacterString)
 ; (:gmd:MD_Metadata :gmd:distributionInfo :gmd:MD_Distribution :gmd:distributionFormat :gmd:MD_Format :gmd:version :gco:CharacterString)
 ;
-
-(defn parse-decoded-msg
-  "Takes a decoded message of AHL code and use it to fill various XML elements."
-  [dmsg])
-
-
-(defn draft->wcmp13
-  "Create the WCMP 1.3 compatible metadata record using the given urn and
-  dateStamp with the help of a template, AHL decoded message and a reference
-  metadata record:
-
-  1. Create the record using a WCMP13 template, elements are mostly empty.
-  2. Fill the template with AHL decoded message.
-  3. Fill the template with relavant contents from the reference record.
-
-  Note:
-    1. The most critical part is to parse the AHL decoded message and use
-  the information to fill some of the elements in metadata record.
-    2. The reference record is used to fill in contents like contacts etc.
-  So it can be a single record for records from the same organisation or
-  country.
-  "
-  [urn datestamp]
-  {'(:gmd:MD_Metadata :gmd:fileIdentifier :gco:CharacterString) urn
-   '(:gmd:MD_Metadata :gmd:dateStamp :gco:DateTime) datestamp}
-  )
