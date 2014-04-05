@@ -68,8 +68,6 @@
   (let [{:keys [TTAA CCCC]} (ahl->parts (:ahl msg))]
     (format "%s collection available from %s as %s" TTAA CCCC (get-in msg ["T1" 0 1]))))
 
-(msg->title msg)
-
 
 (defn parse-decoded-msg
   "Takes a decoded message of AHL code and use it to fill various XML elements."
@@ -79,7 +77,10 @@
 (def paths
   {:urn [:gmd:fileIdentifier z>]
    :datestamp [:gmd:dateStamp :gco:DateTime]
-   :title [:gmd:identificationInfo z> :gmd:citation z> :gmd:title z>]})
+   :title [:gmd:identificationInfo z> :gmd:citation z> :gmd:title z>]
+   :date-creation [:gmd:identificationInfo z> :gmd:citation z>> :gmd:date :gco:Date 0]
+   :date-publication [:gmd:identificationInfo z> :gmd:citation z>> :gmd:date :gco:Date 1]
+   :date-revision [:gmd:identificationInfo z> :gmd:citation z>> :gmd:date :gco:Date 2]})
 
 
 
@@ -108,8 +109,9 @@
 
 (emit (zip/node md))
 
+(:date-creation paths)
 
-(x1-> template :gmd:identificationInfo z> :gmd:citation z> :gmd:title z>)
+(path (apply x1-> template (:date-revision paths)))
 
 
 
