@@ -15,12 +15,21 @@
 (def template
   (-> "md_templates/wcmp13/gx.xml" io/resource io/file parse-file))
 
+(def paths
+  {:urn [:gmd:fileIdentifier z>]
+   :datestamp [:gmd:dateStamp :gco:DateTime]
+   :title [:gmd:identificationInfo z> :gmd:citation z> :gmd:title z>]
+   :date-creation [:gmd:identificationInfo z> :gmd:citation z>> :gmd:date :gco:Date 0]
+   :date-publication [:gmd:identificationInfo z> :gmd:citation z>> :gmd:date :gco:Date 1]
+   :date-revision [:gmd:identificationInfo z> :gmd:citation z>> :gmd:date :gco:Date 2]})
 
 (defn fill
-  [loc pth txt]
-  (let [lc (apply x1-> loc pth)]
+  "Fill the string content into the element specificed by path pointed by
+  the key in the given loc."
+  [loc pk s]
+  (let [lc (apply x1-> loc (pk paths))]
     (println (zip/node lc))
-    (root-loc (edit-text lc txt))))
+    (root-loc (edit-text lc s))))
 
 (def urn-pattern
   "The WMO standard urn pattern for GTS data"
@@ -69,19 +78,15 @@
     (format "%s collection available from %s as %s" TTAA CCCC (get-in msg ["T1" 0 1]))))
 
 
-(defn parse-decoded-msg
-  "Takes a decoded message of AHL code and use it to fill various XML elements."
+(defn- msg->date
+  "Get the VolC1 date property"
   [msg])
 
 
-(def paths
-  {:urn [:gmd:fileIdentifier z>]
-   :datestamp [:gmd:dateStamp :gco:DateTime]
-   :title [:gmd:identificationInfo z> :gmd:citation z> :gmd:title z>]
-   :date-creation [:gmd:identificationInfo z> :gmd:citation z>> :gmd:date :gco:Date 0]
-   :date-publication [:gmd:identificationInfo z> :gmd:citation z>> :gmd:date :gco:Date 1]
-   :date-revision [:gmd:identificationInfo z> :gmd:citation z>> :gmd:date :gco:Date 2]})
 
+(defn parse-decoded-msg
+  "Takes a decoded message of AHL code and use it to fill various XML elements."
+  [msg])
 
 
 (defn draft->wcmp13
@@ -95,9 +100,9 @@
   (if-let [ahl (urn->ahl urn)]
     (let [msg mdgen.draft/msg ;(info-ahl ahl)
           md template
-          md (fill md (:urn paths) urn)
-          md (fill md (:datestamp paths) datestamp)
-          md (fill md (:title paths) (msg->title msg))
+          md (fill md :urn urn)
+          md (fill md :datestamp datestamp)
+          md (fill md :title (msg->title msg))
           ]
       md)))
 

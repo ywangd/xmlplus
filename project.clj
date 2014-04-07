@@ -8,6 +8,8 @@
                  [org.clojure/data.xml "0.0.7"]
                  [org.clojure/data.json "0.2.4"]
                  [clojurewerkz/propertied "1.1.0"]
+                 [org.clojure/java.jdbc "0.3.3"]
+                 [local/ojdbc6 "11.2.0.3"]
                  [lein-light-nrepl "0.0.17"]
                  [instaparse "1.3.0"]]
   :repl-options {:nrepl-middleware [lighttable.nrepl.handler/lighttable-ops]})
