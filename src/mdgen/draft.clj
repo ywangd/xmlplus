@@ -8,7 +8,9 @@
   (:require [clojure.java.io :as io]
             [clojure.zip :as zip]
             [clojure.data.zip :as zf]
-            [clojure.data.zip.xml :as zfx]))
+            [clojure.data.zip.xml :as zfx]
+            [clj-time.core :as ct]
+            [clj-time.format :as cf]))
 
 
 ; The metadata template
@@ -21,7 +23,9 @@
    :title [:gmd:identificationInfo z> :gmd:citation z> :gmd:title z>]
    :date-creation [:gmd:identificationInfo z> :gmd:citation z>> :gmd:date :gco:Date 0]
    :date-publication [:gmd:identificationInfo z> :gmd:citation z>> :gmd:date :gco:Date 1]
-   :date-revision [:gmd:identificationInfo z> :gmd:citation z>> :gmd:date :gco:Date 2]})
+   :date-revision [:gmd:identificationInfo z> :gmd:citation z>> :gmd:date :gco:Date 2]
+   :temporal-begin [:gmd:identificationInfo z>> :gml:beginPosition]
+   :temporal-end [:gmd:identificationInfo z>> :gml:endPosition]})
 
 (defn fill
   "Fill the string content into the element specificed by path pointed by
@@ -40,9 +44,10 @@
   [urn]
   (second (re-find urn-pattern urn)))
 
+
 ;(info-ahl "SPAU32AMMC")
 
-(def msg
+(def msg1
   {"ii" [["Note" "See WMO-No.386 paragraph 2.3.2.2 for definition and use."]],
    "CCCC" [["Location Name" "Melbourne/World Met. Centre"] ["Country Name" "Australia"]],
    "T2" [["Data Type" "Special aviation weather reports"] ["Code Form" "FM 16 (SPECI)"]],
@@ -63,6 +68,15 @@
    "A2" [["Country" "Australia"]]
    :ahl "SPAU32AMMC"})
 
+(defn filter-volc1
+  "Cleanup the VolC1 entry in the message map to only have a single VolC1 info entry."
+  [msg]
+  (let [vs (get msg "VolC1")
+        v (reduce cmp-volc1-date vs)]
+    (assoc (dissoc msg "VolC1") "VolC1" v)))
+
+(def msg (filter-volc1 msg1))
+
 (defn- ahl->parts
   [ahl]
   {:T1 (.substring ahl 0 1)
@@ -71,6 +85,26 @@
    :ii (.substring ahl 4 6)
    :CCCC (.substring ahl 6)
    :TTAA (.substring ahl 0 4)})
+
+(defn- parse-date
+  "Parse a string of YYYY-MM-DD to Date"
+  [s]
+  (cf/parse (cf/formatters :date) s))
+
+(defn- cmp-volc1-date
+  "Compare the date of VolC1 entries and return the latest one"
+  ([v] v)
+  ([v1 v2]
+   (let [d1 (parse-date (get-in v1 [4 1]))
+         d2 (parse-date (get-in v2 [4 1]))]
+     (if (ct/after? d1 d2) v1 v2))))
+
+(defn- msg->volc1
+  "Get the VolC1 information from the message. There maybe multiple VolC1 entries,
+  select the one with the latest Date entry."
+  [msg]
+  (let [vs (get msg "VolC1")]
+    (reduce cmp-volc1-date vs)))
 
 (defn- msg->title
   [msg]
@@ -102,6 +136,7 @@
           md template
           md (fill md :urn urn)
           md (fill md :datestamp datestamp)
+          ; VolC1 Info
           md (fill md :title (msg->title msg))
           ]
       md)))
@@ -114,9 +149,6 @@
 
 (emit (zip/node md))
 
-(:date-creation paths)
-
-(path (apply x1-> template (:date-revision paths)))
 
 
 
