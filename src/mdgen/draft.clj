@@ -152,16 +152,29 @@
   [msg]
   (get-in msg [:VolC1 4 1]))
 
+(defn- abstract-helper
+  [msg k]
+  (let [c (msg k)
+        l (get-in msg :ahl k)]
+    (format ""))
+  )
+
 (defn- msg->abstract
   [msg]
   (let [{:keys [T1 T2 A1A2 ii CCCC]} (:ahl msg)
         data-type (:data-type msg)
         data-format (:data-format msg)
-        abstract (format "This bulletin collects %s with code form %s:\n"
-                         data-type data-format)]
-    abstract))
+        opening (format "This bulletin collects %s with code form %s:\n"
+                         data-type data-format)
+
+        abstract ""]
+    (str opending abstract)))
+
+(defn- msg->bounding-box
+  [msg])
 
 
+; Main entry for XML conversion
 (defn draft->wcmp13
   "Create the WCMP 1.3 compatible metadata record using the given urn and
   dateStamp with the help of a template, AHL decoded message:
