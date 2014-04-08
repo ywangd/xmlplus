@@ -152,22 +152,13 @@
   [msg]
   (get-in msg [:VolC1 4 1]))
 
-(defn- title->abstract-opening
-  [title]
-  (let [idx0 (+ 14 (.indexOf title "collection of"))
-        idx1 (.indexOf title " available")
-        data-type (.substring title idx0 idx1)
-        idx0 (+ 4 (.indexOf title " as "))
-        idx1 (.indexOf title " at Time ")
-        data-format (.substring title idx0 idx1)]
-    (format "This bulletin collects %s with code form %s:\n" data-type data-format)))
-
 (defn- msg->abstract
   [msg]
   (let [{:keys [T1 T2 A1A2 ii CCCC]} (:ahl msg)
         data-type (:data-type msg)
         data-format (:data-format msg)
-        abstract (format "This bulletin collects %s with code form %s:\n" data-type data-format)]
+        abstract (format "This bulletin collects %s with code form %s:\n"
+                         data-type data-format)]
     abstract))
 
 
