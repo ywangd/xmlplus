@@ -27,8 +27,10 @@
   given abbreviated heading line (AHL), i.e. TTAAiiCCCC code."
   [code]
   (with-open [rdr (io/reader (ahl-decoder-url (:ahlDecoderUrl config) code))]
-    (let [msg (apply str (line-seq rdr))]
-      (merge {:ahl code} (json/read-str msg)))))
+    (let [msg (apply str (line-seq rdr))
+          msg (json/read-str msg)]
+      ; Use keyword insetad of string as keys
+      (reduce #(assoc % (keyword %2) (msg %2)) {:ahl code} (keys msg)))))
 
 
 (comment
