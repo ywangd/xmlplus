@@ -106,6 +106,7 @@
    :TTAA (.substring ahl 0 4)})
 
 
+; TODO: The literals used in cond expressions can be factored out into a XML or EDN file.
 (defn- get-data-type
   [msg]
   (let [msg-str (str msg)]
@@ -138,9 +139,20 @@
   [msg]
   (get-in msg [:VolC1 4 1]))
 
+(defn- title->abstract-opening
+  [title]
+  (let [idx0 (+ 14 (.indexOf title "collection of"))
+        idx1 (.indexOf title " available")
+        data-type (.substring title idx0 idx1)
+        idx0 (+ 4 (.indexOf title " as "))
+        idx1 (.indexOf title " at Time ")
+        data-format (.substring title idx0 idx1)]
+    (format "This bulletin collects %s with code form %s:\n" data-type data-format)))
+
 (defn- msg->abstract
   [msg]
-  (let [{:keys [T1 T2 A1A2 ii CCCC]} (-> msg :ahl ahl->parts)]
+  (let [{:keys [T1 T2 A1A2 ii CCCC]} (-> msg :ahl ahl->parts)
+       ]
     ()
 
 
@@ -162,12 +174,14 @@
             md (fill md :urn urn)
             md (fill md :datestamp datestamp)
             ; VolC1 Info
-            md (fill md :title (msg->title msg))
+            title (msg->title msg)
+            md (fill md :title title)
             date-volc1 (msg->date msg)
             md (fill md :date-creation date-volc1)
             md (fill md :date-publication date-volc1)
             md (fill md :date-revision date-volc1)
             md (fill md :temporal-begin date-volc1)
+            md (fill md :abstract (title->abstract-opening title))
             ]
         md)
       (throw (IllegalArgumentException.
