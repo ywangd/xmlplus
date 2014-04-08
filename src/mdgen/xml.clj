@@ -288,6 +288,11 @@
   (println "<?xml version=\"1.0\" encoding=\"utf-8\"?>")
   (emit-element node 0))
 
+(defn emit*
+  "Same as emit but takes a loc as argument"
+  [loc]
+  (emit (zip/node loc)))
+
 (defn write-file
   "Get the root node of the given loc and write out to the given file"
   [fname loc]

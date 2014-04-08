@@ -9,8 +9,8 @@
             [clojure.zip :as zip]
             [clojure.data.zip :as zf]
             [clojure.data.zip.xml :as zfx]
-            [clj-time.core :as ct]
-            [clj-time.format :as cf]))
+            [clj-time.core :as ctc]
+            [clj-time.format :as ctf]))
 
 
 ; The metadata template
@@ -18,6 +18,7 @@
   (-> "md_templates/wcmp13/gx.xml" io/resource io/file parse-file))
 
 (def paths
+  "Paths to the XML elements to be filled"
   {:urn [:gmd:fileIdentifier z>]
    :datestamp [:gmd:dateStamp :gco:DateTime]
    :title [:gmd:identificationInfo z> :gmd:citation z> :gmd:title z>]
@@ -35,49 +36,36 @@
     (println (zip/node lc))
     (root-loc (edit-text lc s))))
 
+(defn- get-recent-volc1
+  "Compare the date of VolC1 entries and return the latest one"
+  ([v] v)
+  ([v1 v2]
+   (let [parse-date #(ctf/parse (ctf/formatters :date) %)
+         d1 (parse-date (get-in v1 [4 1]))
+         d2 (parse-date (get-in v2 [4 1]))]
+     (if (ctc/after? d1 d2) v1 v2))))
+
+(defn tidy-volc1
+  "Tidy up the VolC1 entries in the message to only have a single most recent VolC1 entry."
+  [msg]
+  (let [vs (get msg "VolC1")
+        v (reduce get-recent-volc1 vs)]
+    (assoc (dissoc msg "VolC1") "VolC1" v)))
+
+
 (def urn-pattern
   "The WMO standard urn pattern for GTS data"
   #"(?i)^urn:x-wmo:md:int.wmo.wis::([A-Z]{4}[0-9]{2}[A-Z]{4})$")
 
 (defn urn->ahl
-  "Get the AHL code part out of the urn. It also validates the urn."
+  "Get the AHL code part out of the urn and validates the urn
+  to ensure it is for GTS data."
   [urn]
   (second (re-find urn-pattern urn)))
 
 
-;(info-ahl "SPAU32AMMC")
-
-(def msg1
-  {"ii" [["Note" "See WMO-No.386 paragraph 2.3.2.2 for definition and use."]],
-   "CCCC" [["Location Name" "Melbourne/World Met. Centre"] ["Country Name" "Australia"]],
-   "T2" [["Data Type" "Special aviation weather reports"] ["Code Form" "FM 16 (SPECI)"]],
-   "T1" [["Data Type" "Surface data"] ["Priority" "2/4"]],
-   "A1" [["Country" "Australia"]],
-   "VolC1" [[
-             ["Region" 5]
-             ["RTH" "MELBOURNE"]
-             ["Country" "AUSTRALIA"]
-             ["Centre" "MELBOURNE"]
-             ["Date" "2013-10-21"]
-             ["TTAAii" "SPAU32"]
-             ["CCCC" "AMMC"]
-             ["Code Form" "FM 16-X EXT."]
-             ["Time Group" "AS REQUIRED"]
-             ["Content" "YAMB YBCG YBHM YBMA YBRK YBRM YCIN YFRT YMAV YMHB YMLT YPEA YPGV YPKG YPPD YSCB YSDU YSNF YSRI YWLM"]
-             ["Remarks" ""]]],
-   "A2" [["Country" "Australia"]]
-   :ahl "SPAU32AMMC"})
-
-(defn filter-volc1
-  "Cleanup the VolC1 entry in the message map to only have a single VolC1 info entry."
-  [msg]
-  (let [vs (get msg "VolC1")
-        v (reduce cmp-volc1-date vs)]
-    (assoc (dissoc msg "VolC1") "VolC1" v)))
-
-(def msg (filter-volc1 msg1))
-
 (defn- ahl->parts
+  "Get the different parts out of a AHL code"
   [ahl]
   {:T1 (.substring ahl 0 1)
    :T2 (.substring ahl 1 2)
@@ -86,25 +74,6 @@
    :CCCC (.substring ahl 6)
    :TTAA (.substring ahl 0 4)})
 
-(defn- parse-date
-  "Parse a string of YYYY-MM-DD to Date"
-  [s]
-  (cf/parse (cf/formatters :date) s))
-
-(defn- cmp-volc1-date
-  "Compare the date of VolC1 entries and return the latest one"
-  ([v] v)
-  ([v1 v2]
-   (let [d1 (parse-date (get-in v1 [4 1]))
-         d2 (parse-date (get-in v2 [4 1]))]
-     (if (ct/after? d1 d2) v1 v2))))
-
-(defn- msg->volc1
-  "Get the VolC1 information from the message. There maybe multiple VolC1 entries,
-  select the one with the latest Date entry."
-  [msg]
-  (let [vs (get msg "VolC1")]
-    (reduce cmp-volc1-date vs)))
 
 (defn- msg->title
   [msg]
@@ -132,23 +101,16 @@
   "
   [urn datestamp]
   (if-let [ahl (urn->ahl urn)]
-    (let [msg mdgen.draft/msg ;(info-ahl ahl)
+    (let [msg (info-ahl ahl)
           md template
           md (fill md :urn urn)
           md (fill md :datestamp datestamp)
           ; VolC1 Info
           md (fill md :title (msg->title msg))
           ]
-      md)))
-
-
-
-(def md
-  (draft->wcmp13 "urn:x-wmo:md:int.wmo.wis::SPAU32AMMC" "2013-10-21T00:00:00Z"))
-
-
-(emit (zip/node md))
-
+      md)
+    (throw (IllegalArgumentException.
+            (format "%s is not compatible to WMO standard of GTS data." urn)))))
 
 
 
