@@ -42,6 +42,8 @@
     (root-loc (edit-text lc s))))
 
 
+; Functions for enhancing the message for the convenience of XML conversion
+
 (defn- get-recent-volc1
   [v1 v2]
   (let [parse-date #(ctf/parse (ctf/formatters :date) %)
@@ -97,8 +99,9 @@
 
 (defn- ahl->parts
   "Get the different parts out of a AHL code"
-  [ahl]
-  {:T1 (.substring ahl 0 1)
+  [^String ahl]
+  {:code ahl
+   :T1 (.substring ahl 0 1)
    :T2 (.substring ahl 1 2)
    :A1A2 (.substring ahl 2 4)
    :ii (.substring ahl 4 6)
@@ -107,7 +110,7 @@
 
 
 ; TODO: The literals used in cond expressions can be factored out into a XML or EDN file.
-(defn- get-data-type
+(defn- msg->data-type
   [msg]
   (let [msg-str (str msg)]
     (cond
@@ -115,24 +118,34 @@
      (re-find #"(?i)SPECI" msg-str) (get-in msg [:T2 0 1])
      :else (throw (RuntimeException. "Unknown data type (NYI?)")))))
 
-(defn- get-data-format
+(defn- msg->data-format
   [msg]
   (let [msg-str (str msg)]
     (cond
      (re-find #"(?i)BUFR" msg-str) "BUFR"
      (re-find #"(?i)SPECI" msg-str) "SPECI"
-     :else (throw (RuntimeException. "Unknown data format (NYI?)"))))
-  )
+     :else (throw (RuntimeException. "Unknown data format (NYI?)")))))
+
+(defn- prepare-msg
+  [msg]
+  (let [msg (tidy-volc1 msg)
+        msg (-> msg :ahl ahl->parts (#(assoc msg :ahl %))) ; ahl with parts
+        msg (assoc msg :data-type (msg->data-type msg))
+        msg (assoc msg :data-format (msg->data-format msg))]
+    msg))
+
+
+
+; The actual msg to XML element contents conversion starts from here
 
 (defn- msg->title
   [msg]
-  (let [{:keys [TTAA ii CCCC]} (ahl->parts (:ahl msg))
-        data-type (get-data-type msg)
-        data-format (get-data-format msg)
+  (let [{:keys [TTAA ii CCCC]} (:ahl msg)
+        data-type (:data-type msg)
+        data-format (:data-format msg)
         time-group (get-in msg [:VolC1 8 1])]
     (format "%s%s collection of %s available from %s as %s at Time %s"
             TTAA ii data-type CCCC data-format time-group)))
-
 
 (defn- msg->date
   "Get the VolC1 date property"
@@ -151,80 +164,76 @@
 
 (defn- msg->abstract
   [msg]
-  (let [{:keys [T1 T2 A1A2 ii CCCC]} (-> msg :ahl ahl->parts)
-       ]
-    ()
+  (let [{:keys [T1 T2 A1A2 ii CCCC]} (:ahl msg)
+        data-type (:data-type msg)
+        data-format (:data-format msg)
+        abstract (format "This bulletin collects %s with code form %s:\n" data-type data-format)]
+    abstract))
 
 
-    ))
+(defn draft->wcmp13
+  "Create the WCMP 1.3 compatible metadata record using the given urn and
+  dateStamp with the help of a template, AHL decoded message:
 
-  (msg->abstract {:ahl "SPAU32AMMC" :T1 "something"})
-
-  (defn draft->wcmp13
-    "Create the WCMP 1.3 compatible metadata record using the given urn and
-    dateStamp with the help of a template, AHL decoded message:
-
-    1. Create the record using a WCMP13 template, elements are mostly empty.
-    2. Fill the template with AHL decoded message.
-    "
-    [urn datestamp]
-    (if-let [ahl (urn->ahl urn)]
-      (let [msg (-> ahl info-ahl tidy-volc1)
-            md template
-            md (fill md :urn urn)
-            md (fill md :datestamp datestamp)
-            ; VolC1 Info
-            title (msg->title msg)
-            md (fill md :title title)
-            date-volc1 (msg->date msg)
-            md (fill md :date-creation date-volc1)
-            md (fill md :date-publication date-volc1)
-            md (fill md :date-revision date-volc1)
-            md (fill md :temporal-begin date-volc1)
-            md (fill md :abstract (title->abstract-opening title))
-            ]
-        md)
-      (throw (IllegalArgumentException.
-              (format "%s is not compatible to WMO standard of GTS data." urn)))))
+  1. Create the record using a WCMP13 template, elements are mostly empty.
+  2. Fill the template with AHL decoded message.
+  "
+  [urn datestamp]
+  (if-let [ahl (urn->ahl urn)]
+    (let [msg (-> ahl info-ahl prepare-msg)
+          date-volc1 (msg->date msg)]
+      (-> template ; start as a template
+          ; fill basic info from draft
+          (fill :urn urn)
+          (fill :datestamp datestamp)
+          ; fill with decoded message
+          (fill :title (msg->title msg))
+          (fill :date-creation date-volc1)
+          (fill :date-publication date-volc1)
+          (fill :date-revision date-volc1)
+          (fill :temporal-begin date-volc1)
+          (fill :abstract (msg->abstract msg))))
+    (throw (RuntimeException.
+            (format "%s is not compatible to WMO standard of GTS data." urn)))))
 
 
 
-  ; This is the most critical function. Here is a list of elements that need to
-  ; be filled by parsing the decoded message.
-  ;
-  ; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:citation :gmd:CI_Citation :gmd:title :gco:CharacterString)
-  ;
-  ; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:citation :gmd:CI_Citation :gmd:date :gmd:CI_Date :gmd:date :gco:Date)
-  ; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:citation :gmd:CI_Citation :gmd:date 1 :gmd:CI_Date :gmd:date :gco:Date)
-  ; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:citation :gmd:CI_Citation :gmd:date 2 :gmd:CI_Date :gmd:date :gco:Date)
-  ;
-  ; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:abstract :gco:CharacterString)
-  ;
-  ; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:resourceFormat :gmd:MD_Format :gmd:name :gco:CharacterString)
-  ; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:resourceFormat :gmd:MD_Format :gmd:version :gco:CharacterString)
-  ;
-  ; keyword of type "theme"
-  ; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:descriptiveKeywords :gmd:MD_Keywords :gmd:keyword :gco:CharacterString)
-  ;
-  ; WMOEssential and GTSPriority
-  ; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:resourceConstraints :gmd:MD_LegalConstraints :gmd:otherConstraints :gco:CharacterString)
-  ; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:resourceConstraints :gmd:MD_LegalConstraints :gmd:otherConstraints 1 :gco:CharacterString)
-  ;
-  ; climatologyMeteorologyAtmosphere
-  ; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:topicCategory :gmd:MD_TopicCategoryCode)
-  ;
-  ; west
-  ; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:extent :gmd:EX_Extent :gmd:geographicElement :gmd:EX_GeographicBoundingBox :gmd:westBoundLongitude :gco:Decimal)
-  ; east
-  ; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:extent :gmd:EX_Extent :gmd:geographicElement :gmd:EX_GeographicBoundingBox :gmd:eastBoundLongitude :gco:Decimal)
-  ; south
-  ; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:extent :gmd:EX_Extent :gmd:geographicElement :gmd:EX_GeographicBoundingBox :gmd:southBoundLatitude :gco:Decimal)
-  ; north
-  ; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:extent :gmd:EX_Extent :gmd:geographicElement :gmd:EX_GeographicBoundingBox :gmd:northBoundLatitude :gco:Decimal)
-  ;
-  ; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:extent :gmd:EX_Extent :gmd:temporalElement :gmd:EX_TemporalExtent :gmd:extent :gml:TimePeriod :gml:beginPosition)
-  ; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:extent :gmd:EX_Extent :gmd:temporalElement :gmd:EX_TemporalExtent :gmd:extent :gml:TimePeriod :gml:endPosition)
-  ;
-  ; (:gmd:MD_Metadata :gmd:distributionInfo :gmd:MD_Distribution :gmd:distributionFormat :gmd:MD_Format :gmd:name :gco:CharacterString)
-  ; (:gmd:MD_Metadata :gmd:distributionInfo :gmd:MD_Distribution :gmd:distributionFormat :gmd:MD_Format :gmd:version :gco:CharacterString)
-  ;
+; This is the most critical function. Here is a list of elements that need to
+; be filled by parsing the decoded message.
+;
+; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:citation :gmd:CI_Citation :gmd:title :gco:CharacterString)
+;
+; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:citation :gmd:CI_Citation :gmd:date :gmd:CI_Date :gmd:date :gco:Date)
+; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:citation :gmd:CI_Citation :gmd:date 1 :gmd:CI_Date :gmd:date :gco:Date)
+; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:citation :gmd:CI_Citation :gmd:date 2 :gmd:CI_Date :gmd:date :gco:Date)
+;
+; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:abstract :gco:CharacterString)
+;
+; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:resourceFormat :gmd:MD_Format :gmd:name :gco:CharacterString)
+; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:resourceFormat :gmd:MD_Format :gmd:version :gco:CharacterString)
+;
+; keyword of type "theme"
+; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:descriptiveKeywords :gmd:MD_Keywords :gmd:keyword :gco:CharacterString)
+;
+; WMOEssential and GTSPriority
+; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:resourceConstraints :gmd:MD_LegalConstraints :gmd:otherConstraints :gco:CharacterString)
+; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:resourceConstraints :gmd:MD_LegalConstraints :gmd:otherConstraints 1 :gco:CharacterString)
+;
+; climatologyMeteorologyAtmosphere
+; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:topicCategory :gmd:MD_TopicCategoryCode)
+;
+; west
+; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:extent :gmd:EX_Extent :gmd:geographicElement :gmd:EX_GeographicBoundingBox :gmd:westBoundLongitude :gco:Decimal)
+; east
+; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:extent :gmd:EX_Extent :gmd:geographicElement :gmd:EX_GeographicBoundingBox :gmd:eastBoundLongitude :gco:Decimal)
+; south
+; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:extent :gmd:EX_Extent :gmd:geographicElement :gmd:EX_GeographicBoundingBox :gmd:southBoundLatitude :gco:Decimal)
+; north
+; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:extent :gmd:EX_Extent :gmd:geographicElement :gmd:EX_GeographicBoundingBox :gmd:northBoundLatitude :gco:Decimal)
+;
+; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:extent :gmd:EX_Extent :gmd:temporalElement :gmd:EX_TemporalExtent :gmd:extent :gml:TimePeriod :gml:beginPosition)
+; (:gmd:MD_Metadata :gmd:identificationInfo :gmd:MD_DataIdentification :gmd:extent :gmd:EX_Extent :gmd:temporalElement :gmd:EX_TemporalExtent :gmd:extent :gml:TimePeriod :gml:endPosition)
+;
+; (:gmd:MD_Metadata :gmd:distributionInfo :gmd:MD_Distribution :gmd:distributionFormat :gmd:MD_Format :gmd:name :gco:CharacterString)
+; (:gmd:MD_Metadata :gmd:distributionInfo :gmd:MD_Distribution :gmd:distributionFormat :gmd:MD_Format :gmd:version :gco:CharacterString)
+;
