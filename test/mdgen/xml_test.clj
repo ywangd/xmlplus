@@ -177,6 +177,21 @@
                      :attrs nil,
                      :content ["2012-06-15"]}]})))
 
+(deftest test-texts=*
+  (is (= (x1-> l1 zf/descendants (texts=* #"^2012-06-[0-9]{2}$") first)
+         {:tag :gmd:date,
+          :attrs nil,
+          :content [{:tag :gco:Date,
+                     :attrs nil,
+                     :content ["2012-06-15"]}]})))
+
+(deftest test-text=*
+  (is (= (x1-> l1 zf/descendants (text=* #"2012-06-[0-9]{2}") first)
+         {:tag :gco:Date,
+          :attrs nil,
+          :content ["2012-06-15"]})))
+
+
 (deftest test-convenient-func
   (testing "z>>"
     (is (= (x1-> l1 z>> :gmd:title)

@@ -83,13 +83,10 @@
 
 (defn- msg->date
   "Get the VolC1 date property"
-  [msg])
+  [msg]
+  (get-in msg ["VolC1" 4 1]))
 
 
-
-(defn parse-decoded-msg
-  "Takes a decoded message of AHL code and use it to fill various XML elements."
-  [msg])
 
 
 (defn draft->wcmp13
@@ -101,12 +98,17 @@
   "
   [urn datestamp]
   (if-let [ahl (urn->ahl urn)]
-    (let [msg (info-ahl ahl)
+    (let [msg (-> ahl info-ahl tidy-volc1)
           md template
           md (fill md :urn urn)
           md (fill md :datestamp datestamp)
           ; VolC1 Info
           md (fill md :title (msg->title msg))
+          date-volc1 (msg->date msg)
+          md (fill md :date-creation date-volc1)
+          md (fill md :date-publication date-volc1)
+          md (fill md :date-revision date-volc1)
+          md (fill md :temporal-begin date-volc1)
           ]
       md)
     (throw (IllegalArgumentException.

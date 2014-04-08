@@ -1,5 +1,6 @@
 (ns mdgen.draft-test
-  (:use [mdgen xml core draft]))
+  (:use [clojure.test]
+        [mdgen xml core draft]))
 
 ; Simulate the result of (info-ahl "SPAU32AMMC")
 (def msg1
@@ -23,8 +24,6 @@
    "A2" [["Country" "Australia"]]
    :ahl "SPAU32AMMC"})
 
-(def msg (tidy-volc1 msg1))
-
 
 ; Mock info-ahl without network usage
 (defn- info-ahl*
@@ -34,9 +33,28 @@
 ; Test with dynamic bindings
 (binding [info-ahl info-ahl*]
   (def md
-    (draft->wcmp13 "urn:x-wmo:md:int.wmo.wis::SPAU32AMMC" "2013-10-21T00:00:00Z"))
+    (draft->wcmp13 "urn:x-wmo:md:int.wmo.wis::SPAU32AMMC" "2013-10-21T00:00:00Z")))
+
+(deftest test-filled-elements
+  (testing "fileIdentifier"
+    (is (= (x1-> md z>> :gmd:fileIdentifier z> text)
+           "urn:x-wmo:md:int.wmo.wis::SPAU32AMMC")))
+  (testing "dateStamp"
+    (is (= (x1-> md z>> :gmd:dateStamp z> text)
+           "2013-10-21T00:00:00Z")))
+  (testing "date-revision"
+    (is (= (x1-> md z>> :gmd:citation z>> :gmd:CI_Date [(texts=* #"revision")] z>> :gco:Date text)
+           "2013-10-21"))))
 
 
-  (emit* md)
+(run-tests *ns*)
 
-  )
+
+(write-file "tmp-out.xml" md)
+
+
+;(emit* md)
+
+
+
+

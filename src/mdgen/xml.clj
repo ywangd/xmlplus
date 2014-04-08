@@ -33,9 +33,18 @@
 
 (defn texts=
   "Return a function to test whether given text is equal to the concatenation
-  of all the texts under the given node."
+  of all the texts under the given node.
+  This behaviour is desriable instead of comparing the given string to each of
+  string individually under the given node, which always returnt the root node."
   [s]
   (fn [loc] (= (apply str (texts loc)) s)))
+
+(defn texts=*
+  "Similar to texts= but returns a function takes a regex pattern.
+  Note that it is most usually necessary to have ^ and $ around the
+  regex pattern. Otherwise the match will always be the root node."
+  [p]
+  (fn [loc] ((complement nil?) (re-find p (apply str (texts loc))))))
 
 (defn text
   "This function get only text directly belong to the node at given location"
@@ -47,6 +56,11 @@
    equal to the given text."
   [s]
   (fn [loc] (= (text loc) s)))
+
+(defn text=*
+  "Similar to text= but returns a function takes a regex pattern"
+  [p]
+  (fn [loc] ((complement nil?) (re-find p (text loc)))))
 
 (defn attr?
   "Returns function for checking whether the node at given loction has the given attribute"
