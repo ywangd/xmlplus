@@ -159,6 +159,8 @@
   ([msg k]
    (cond
     (and (= k :A2) (:identical-As msg)) nil
+    (and (= k :A1) (:identical-As msg)) (let [msg (assoc msg :A1A2 (:A1 msg))]
+                                          (abstract-helper msg :A1A2))
     :else (let [heading (format "%s(%s)\n" (name k) (get-in msg [:ahl k]))]
             (apply str heading (for [[k v] (msg k)] (format "    %s: %s\n" k v)))))))
 
