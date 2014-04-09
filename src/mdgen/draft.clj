@@ -30,7 +30,11 @@
    :date-revision [:gmd:identificationInfo z> :gmd:citation z>> :gmd:date :gco:Date 2]
    :temporal-begin [:gmd:identificationInfo z>> :gml:beginPosition]
    :temporal-end [:gmd:identificationInfo z>> :gml:endPosition]
-   :abstract [:gmd:identificationInfo z>> :gmd:abstract z>]})
+   :abstract [:gmd:identificationInfo z>> :gmd:abstract z>]
+   :bbox-w [z>> :gmd:westBoundLongitude z>]
+   :bbox-e [z>> :gmd:eastBoundLongitude z>]
+   :bbox-s [z>> :gmd:southBoundLatitude z>]
+   :bbox-n [z>> :gmd:northBoundLatitude z>]})
 
 
 (defn- fill
@@ -128,7 +132,7 @@
      (re-find #"(?i)SPECI" msg-str) "SPECI"
      :else (throw (RuntimeException. "Unknown data format (NYI?)")))))
 
-(defn- prepare-msg
+(defn prepare-msg
   [msg]
   (let [msg (tidy-volc1 msg)
         msg (-> msg :ahl ahl->parts (#(assoc msg :ahl %))) ; ahl with parts
@@ -164,6 +168,10 @@
     :else (let [heading (format "%s(%s)\n" (name k) (get-in msg [:ahl k]))]
             (apply str heading (for [[k v] (msg k)] (format "    %s: %s\n" k v)))))))
 
+; The abstract is mainly composed of the formatted message.
+; One thing to note is that the info for A1 and A2 may be identical.
+; In this case, A1 and A2 are combined in a single group. This is taken
+; care by the helper function.
 (defn- msg->abstract
   [msg]
   (let [data-type (:data-type msg)
@@ -173,8 +181,58 @@
         body (for [k [:T1 :T2 :A1 :A2 :ii :CCCC]] (abstract-helper msg k))]
     (string/trim (apply str heading body))))
 
+(defn- country->bounding-box
+  [country]
+  (condp = country
+    "Australia" [112.0 155.0 -45.0 -10.5]
+    (throw (RuntimeException. "Unknown country"))))
+
+(defn- get-sn
+  [desc]
+  (let [ptn #"(\S+) hemisphere$"
+        [_ direction] (re-find ptn desc)]
+    (condp = direction
+      "southern" [-90.0 0.0]
+      "northern" [0.0 90.0]
+      (throw (RuntimeException. "Unknown s/n direction")))))
+
+; A hemisphere style description may not have info for longitudes.
+; For such case, it is assigned as the entire longitude span.
+(defn- get-we
+  [desc]
+  (if-let [matches (re-find #"^(\d+).\s+-\s+(\d+).([WE])\s+" desc)]
+    (let [[_ lon1 lon2 direction] matches
+          lon1 (Double/parseDouble lon1)
+          lon2 (Double/parseDouble lon2)]
+      (condp = direction
+        "E" [lon2 lon1]
+        "W" [(if (zero? lon2) lon2 (- lon2)) (if (zero? lon1) lon1 (- lon1))] ; convert W lon to negative values
+        (throw (RuntimeException. "Unknown w/e direction"))))
+    [-180.0 180.0]))
+
+; The derivation from geographical description is currently very limited.
+; It only deals with hemisphere style description.
+(defn- geo-desc->bounding-box
+  [^String desc]
+  (let [desc (string/trim desc)]
+    (if (.endsWith desc "hemisphere")
+      (into (get-we desc) (get-sn desc))
+      (throw (RuntimeException. "geo-are must end with hemisphere")))))
+
+; There are currently two types of derivation.
+; The first is from country name.
+; The second is from a geographical area description
+; This function calls two helper functions to deal with the two derivations.
 (defn- msg->bounding-box
-  [msg])
+  "Derive the bounding box info from the decoded message.
+  bounging-box is a vector of [west, east, south north]"
+  [msg]
+  (let [geo-type (get-in msg [:A2 0 0])
+        geo-value (get-in msg [:A2 0 1])]
+    (condp = geo-type
+      "Country" (mapv str (country->bounding-box geo-value))
+      "Geographical Area Designator" (mapv str(geo-desc->bounding-box geo-value))
+      (throw (RuntimeException. "Unknown geographical information")))))
 
 
 ; Main entry for XML conversion
@@ -188,7 +246,8 @@
   [urn datestamp]
   (if-let [ahl (urn->ahl urn)]
     (let [msg (-> ahl info-ahl prepare-msg)
-          date-volc1 (msg->date msg)]
+          date-volc1 (msg->date msg)
+          [w e s n] (msg->bounding-box msg)]
       (-> template ; start as a template
           ; fill basic info from draft
           (fill :urn urn)
@@ -199,7 +258,11 @@
           (fill :date-publication date-volc1)
           (fill :date-revision date-volc1)
           (fill :temporal-begin date-volc1)
-          (fill :abstract (msg->abstract msg))))
+          (fill :abstract (msg->abstract msg))
+          (fill :bbox-w w)
+          (fill :bbox-e e)
+          (fill :bbox-s s)
+          (fill :bbox-n n)))
     (throw (RuntimeException.
             (format "%s is not compatible to WMO standard of GTS data." urn)))))
 
