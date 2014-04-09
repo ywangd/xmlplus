@@ -103,6 +103,8 @@
   {:code ahl
    :T1 (.substring ahl 0 1)
    :T2 (.substring ahl 1 2)
+   :A1 (.substring ahl 2 3)
+   :A2 (.substring ahl 3 4)
    :A1A2 (.substring ahl 2 4)
    :ii (.substring ahl 4 6)
    :CCCC (.substring ahl 6)
@@ -131,7 +133,8 @@
   (let [msg (tidy-volc1 msg)
         msg (-> msg :ahl ahl->parts (#(assoc msg :ahl %))) ; ahl with parts
         msg (assoc msg :data-type (msg->data-type msg))
-        msg (assoc msg :data-format (msg->data-format msg))]
+        msg (assoc msg :data-format (msg->data-format msg))
+        msg (assoc msg :identical-As (= (:A1 msg) (:A2 msg)))]
     msg))
 
 
@@ -153,22 +156,20 @@
   (get-in msg [:VolC1 4 1]))
 
 (defn- abstract-helper
-  [msg k]
-  (let [c (msg k)
-        l (get-in msg :ahl k)]
-    (format ""))
-  )
+  ([msg k]
+   (cond
+    (and (= k :A2) (:identical-As msg)) nil
+    :else (let [heading (format "%s(%s)\n" (name k) (get-in msg [:ahl k]))]
+            (apply str heading (for [[k v] (msg k)] (format "    %s: %s\n" k v)))))))
 
 (defn- msg->abstract
   [msg]
-  (let [{:keys [T1 T2 A1A2 ii CCCC]} (:ahl msg)
-        data-type (:data-type msg)
+  (let [data-type (:data-type msg)
         data-format (:data-format msg)
-        opening (format "This bulletin collects %s with code form %s:\n"
+        heading (format "This bulletin collects %s with code form %s:\n"
                          data-type data-format)
-
-        abstract ""]
-    (str opending abstract)))
+        body (for [k [:T1 :T2 :A1 :A2 :ii :CCCC]] (abstract-helper msg k))]
+    (string/trim (apply str heading body))))
 
 (defn- msg->bounding-box
   [msg])
