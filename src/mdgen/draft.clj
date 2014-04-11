@@ -232,6 +232,7 @@
     (condp = geo-type
       "Country" (mapv str (country->bounding-box geo-value))
       "Geographical Area Designator" (mapv str(geo-desc->bounding-box geo-value))
+      "Geographical Area" (throw (RuntimeException. "NYI")) ; e.g. South Pacific area
       (throw (RuntimeException. "Unknown geographical information")))))
 
 
