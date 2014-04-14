@@ -219,7 +219,7 @@
       (into (get-we desc) (get-sn desc))
       (throw (RuntimeException. "geo-are must end with hemisphere")))))
 
-; There are currently two types of derivation.
+; There are currently three types of derivation.
 ; The first is from country name.
 ; The second is from a geographical area description
 ; This function calls two helper functions to deal with the two derivations.
