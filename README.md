@@ -7,7 +7,7 @@ a single element in a multiple match.
 
 ## Usage
 ```clojure
-(use 'xmlplush.xml')
+(use 'xmlplus.xml)
 
 (def loc (parse-str "<a><b></b><b></b></a>"))
 
