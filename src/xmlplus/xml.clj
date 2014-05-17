@@ -1,4 +1,4 @@
-(ns mdgen.xml
+(ns xmlplus.xml
   (:require [clojure.zip :as zip]
             [clojure.xml :as xml]
             [clojure.java.io :as io]
@@ -23,6 +23,16 @@
   "Get the root location of the given loc."
   [loc]
   (-> loc zip/root zip/xml-zip))
+
+(defn tag-not=
+  "Returns a query predicate that matches a node when its is a tag
+  not named tagname."
+  [tagname]
+  (fn [loc]
+    (filter #(and (zip/branch? %) (not= tagname (:tag (zip/node %))))
+            (if (zf/auto? loc)
+              (zf/children-auto loc)
+              (list (zf/auto true loc))))))
 
 (defn texts
   "This function get texts from all descendant nodes at given location
@@ -64,8 +74,10 @@
 
 (defn attr?
   "Returns function for checking whether the node at given loction has the given attribute"
-  [att]
-  (fn [loc] (boolean (some #{att} (-> loc zip/node :attrs keys)))))
+  ([att]
+   (fn [loc] (boolean (some #{att} (-> loc zip/node :attrs keys)))))
+  ([loc att]
+   ((attr? att) loc)))
 
 (defn x->
   "Similar to clojure.data.zip/xml-> with the ability to take integer
@@ -105,7 +117,7 @@
 
 (defn filled?
   "Returns a function to check whether the node at given location is filled.
-  It can be custmoized to return a function just like emdgen.xml/empty-node?
+  It can be custmoized to return a function just like xmlplus.xml/empty-node?
   It can also take extra attributes to exclude valid empty nodes, i.e. nodes
   with attributes indicating it should be empty."
   [& attrs]
@@ -166,9 +178,9 @@
   "Edit the attrs of the node at given location.
   :dissoc [] to remove existing attrs."
   [loc attrs & {:as opts}]
-  (let [ex-attrs (-> loc first :attrs)
+  (let [ex-attrs (-> loc zip/node :attrs)
         loc (zip/edit loc #(assoc % :attrs (merge ex-attrs attrs)))
-        attrs (-> loc first :attrs)
+        attrs (-> loc zip/node :attrs)
         dis (:dissoc opts nil)]
     (if dis
       (zip/edit loc #(assoc % :attrs (apply dissoc attrs dis)))

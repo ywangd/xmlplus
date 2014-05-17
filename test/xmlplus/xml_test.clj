@@ -1,6 +1,6 @@
-(ns mdgen.xml-test
+(ns xmlplus.xml-test
   (:use [clojure.test]
-        [mdgen.xml])
+        [xmlplus.xml])
   (:require [clojure.zip :as zip]
             [clojure.xml :as xml]
             [clojure.data.zip :as zf]
@@ -120,6 +120,10 @@
              :gmd:keyword
              2
              :gco:CharacterString)))))
+
+(deftest test-edit-attrs
+  (is (= (zfx/attr (x1-> (root-loc (edit-attrs (x1-> l1 zf/descendants :gco:Date 1) {:alias "something"})) zf/descendants :gco:Date 1) :alias)
+         "something")))
 
 (deftest test-edit-text
   (is (= (let [new-l1 (-> (edit-text (-> l1 zip/down zip/down) "CHANGED") zip/root zip/xml-zip)]
