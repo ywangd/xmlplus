@@ -6,6 +6,11 @@ a single element in a multiple match.
 
 
 ## Usage
+(use 'xmlplush.xml')
+
+(def loc (parse-str "<a><b></b><b></b></a>"))
+
+(x1-> loc :b 1)
 
 
 ## License
